@@ -74,6 +74,10 @@ output "github_oidc_provider_arn" {
   value = var.enable_github_actions_oidc ? module.github_actions_oidc[0].oidc_provider_arn : null
 }
 
+output "cloudwatch_log_group_name" {
+  value = module.ecs_backend.cloudwatch_log_group_name
+}
+
 # ─── Bedrock Knowledge Base ───
 
 output "bedrock_knowledge_base_id" {
