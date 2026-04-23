@@ -109,3 +109,15 @@ output "bedrock_vector_index_name" {
   description = "Vector index name (create manually after first apply)"
   value       = module.bedrock_knowledge_base.vector_index_name
 }
+
+# ─── Bedrock Chat API ───
+
+output "chat_api_url" {
+  description = "Chat API endpoint URL (POST /chat)"
+  value       = module.bedrock_chat.api_gateway_url
+}
+
+output "chat_lambda_function_name" {
+  description = "Chat Lambda function name"
+  value       = module.bedrock_chat.lambda_function_name
+}

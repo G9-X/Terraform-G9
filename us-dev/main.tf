@@ -128,3 +128,16 @@ module "bedrock_knowledge_base" {
     data.aws_caller_identity.current.arn
   ]
 }
+
+# ─── Bedrock Chat (Lambda + API Gateway) ───
+
+module "bedrock_chat" {
+  source = "../module/BedrockChat"
+
+  project_name      = var.project_name
+  environment       = var.environment
+  aws_region        = var.aws_region
+  knowledge_base_id = module.bedrock_knowledge_base.knowledge_base_id
+  model_id          = "us.meta.llama4-scout-17b-instruct-v1:0"
+  allowed_origin    = "https://app.group9.id.vn"
+}
