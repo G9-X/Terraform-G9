@@ -48,6 +48,13 @@ stripe_secret_key    = "replace-with-stripe-secret-key"
 stripe_publishable_key = "replace-with-stripe-publishable-key"
 stripe_webhook_secret = "replace-with-stripe-webhook-secret"
 
+# Lambda Bedrock (AI chat via API Gateway)
+enable_lambda_bedrock = false
+bedrock_model_id      = "meta.llama3-1-70b-instruct-v1:0"
+bedrock_region        = "us-west-2"
+lambda_timeout        = 30
+lambda_memory         = 256
+
 db_instance_class        = "db.t3.small"
 db_allocated_storage     = 20
 db_max_allocated_storage = 100
