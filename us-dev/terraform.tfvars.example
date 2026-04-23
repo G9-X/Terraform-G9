@@ -1,0 +1,56 @@
+project_name = "xbrain"
+environment  = "us-dev"
+aws_region   = "us-east-1"
+
+availability_zones = ["us-east-1a", "us-east-1b"]
+
+vpc_cidr                  = "10.50.0.0/16"
+public_subnet_cidrs       = ["10.50.1.0/24", "10.50.2.0/24"]
+private_app_subnet_cidrs  = ["10.50.11.0/24", "10.50.12.0/24"]
+private_data_subnet_cidrs = ["10.50.21.0/24", "10.50.22.0/24"]
+
+backend_port          = 8080
+backend_cpu           = 256
+backend_memory        = 512
+backend_desired_count = 0
+backend_image_tag     = "latest"
+health_check_path     = "/health"
+
+ecs_instance_type         = "t3.small"
+ecs_ec2_min_size          = 1
+ecs_ec2_max_size          = 2
+ecs_ec2_desired_capacity  = 1
+
+ecr_image_keep_count = 20
+
+enable_rds = true
+enable_github_actions_oidc = true
+create_github_oidc_provider = true
+existing_github_oidc_provider_arn = ""
+github_actions_role_name = "xbrain-github-actions-us-dev"
+
+github_repo_owner     = "G9-X"
+github_repo_name      = "Merxly-XB9"
+github_branch         = "develop"
+backend_container_name = "backend"
+
+# MySQL credentials
+db_username = "xbrainadmin"
+db_password = "ChangeMe123!"
+db_name     = "xbrain"
+
+# Backend app secrets injected via ECS task secrets
+jwt_secret_key       = "replace-with-strong-jwt-secret"
+cloudinary_cloud_name = "replace-with-cloudinary-cloud-name"
+cloudinary_api_key   = "replace-with-cloudinary-api-key"
+cloudinary_api_secret = "replace-with-cloudinary-api-secret"
+stripe_secret_key    = "replace-with-stripe-secret-key"
+stripe_publishable_key = "replace-with-stripe-publishable-key"
+stripe_webhook_secret = "replace-with-stripe-webhook-secret"
+
+db_instance_class        = "db.t3.small"
+db_allocated_storage     = 20
+db_max_allocated_storage = 100
+db_engine                = "mysql"
+db_engine_version        = "8.0"
+db_multi_az              = true
