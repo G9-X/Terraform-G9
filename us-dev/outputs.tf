@@ -74,6 +74,34 @@ output "github_oidc_provider_arn" {
   value = var.enable_github_actions_oidc ? module.github_actions_oidc[0].oidc_provider_arn : null
 }
 
-output "cloudwatch_log_group_name" {
-  value = module.ecs_backend.cloudwatch_log_group_name
+# ─── Bedrock Knowledge Base ───
+
+output "bedrock_knowledge_base_id" {
+  description = "Bedrock Knowledge Base ID"
+  value       = module.bedrock_knowledge_base.knowledge_base_id
+}
+
+output "bedrock_data_source_id" {
+  description = "Bedrock S3 Data Source ID"
+  value       = module.bedrock_knowledge_base.data_source_id
+}
+
+output "bedrock_s3_data_bucket_name" {
+  description = "S3 bucket name for KB documents"
+  value       = module.bedrock_knowledge_base.s3_data_bucket_name
+}
+
+output "bedrock_opensearch_collection_endpoint" {
+  description = "OpenSearch Serverless collection endpoint"
+  value       = module.bedrock_knowledge_base.opensearch_collection_endpoint
+}
+
+output "bedrock_opensearch_collection_name" {
+  description = "OpenSearch Serverless collection name"
+  value       = module.bedrock_knowledge_base.opensearch_collection_name
+}
+
+output "bedrock_vector_index_name" {
+  description = "Vector index name (create manually after first apply)"
+  value       = module.bedrock_knowledge_base.vector_index_name
 }

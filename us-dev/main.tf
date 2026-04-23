@@ -111,3 +111,20 @@ module "github_actions_oidc" {
   ecs_task_execution_role_arn = module.ecs_backend.task_execution_role_arn
   ecs_task_role_arn           = module.ecs_backend.task_role_arn
 }
+
+# ─── Bedrock Knowledge Base ───
+
+data "aws_caller_identity" "current" {}
+
+module "bedrock_knowledge_base" {
+  source = "../module/BedrockKnowledgeBase"
+
+  project_name = var.project_name
+  environment  = var.environment
+  aws_region   = var.aws_region
+
+  # Pass current caller so they can create the AOSS vector index manually
+  additional_access_policy_principals = [
+    data.aws_caller_identity.current.arn
+  ]
+}
