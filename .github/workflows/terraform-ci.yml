@@ -5,12 +5,14 @@ on:
     branches: ["main"]
     paths:
       - "us-dev/**"
+      - "us-dev-static/**"
       - "module/**"
       - ".github/workflows/terraform-ci.yml"
   pull_request:
     branches: ["main"]
     paths:
       - "us-dev/**"
+      - "us-dev-static/**"
       - "module/**"
       - ".github/workflows/terraform-ci.yml"
   workflow_dispatch:
@@ -29,6 +31,10 @@ jobs:
   terraform:
     name: Terraform Plan & Apply
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dir: [us-dev, us-dev-static]
 
     defaults:
       run:
