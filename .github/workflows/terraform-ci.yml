@@ -21,7 +21,8 @@ permissions:
   pull-requests: write
 
 env:
-  AWS_REGION: us-west-2
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  TF_VAR_aws_region: ${{ vars.AWS_REGION }}
   TF_WORKING_DIR: us-dev
 
 jobs:
