@@ -1,0 +1,1 @@
+bash: root@testIG:/home/azureuser#: Không có tập tin hoặc thư mục như vậy
