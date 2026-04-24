@@ -230,6 +230,7 @@ variable "enable_lambda_bedrock" {
 
 variable "bedrock_model_id" {
   type    = string
+  default = "us.deepseek.deepseek-r1-v1:0"
 }
 
 variable "bedrock_region" {
