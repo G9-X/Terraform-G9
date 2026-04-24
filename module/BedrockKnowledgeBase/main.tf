@@ -41,13 +41,23 @@ resource "aws_s3_bucket_public_access_block" "kb_data" {
   restrict_public_buckets = true
 }
 
+resource "aws_s3_bucket_versioning" "kb_data" {
+  bucket = aws_s3_bucket.kb_data.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 resource "aws_s3_bucket_server_side_encryption_configuration" "kb_data" {
   bucket = aws_s3_bucket.kb_data.id
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      sse_algorithm     = var.kms_key_arn != "" ? "aws:kms" : "AES256"
+      kms_master_key_id = var.kms_key_arn != "" ? var.kms_key_arn : null
     }
+    bucket_key_enabled = var.kms_key_arn != "" ? true : false
   }
 }
 

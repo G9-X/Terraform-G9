@@ -93,3 +93,9 @@ variable "github_branch" {
   type        = string
   default     = "main"
 }
+
+variable "kms_key_arn" {
+  description = "KMS key ARN for S3 encryption. If empty, uses AES256."
+  type        = string
+  default     = ""
+}

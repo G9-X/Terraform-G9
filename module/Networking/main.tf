@@ -134,3 +134,48 @@ resource "aws_route_table_association" "private_data" {
   subnet_id      = aws_subnet.private_data[count.index].id
   route_table_id = aws_route_table.private_data.id
 }
+
+# ─────────────────────────────────────────────────────────
+# VPC Interface Endpoint — CloudWatch Logs
+# ─────────────────────────────────────────────────────────
+# ECS containers send logs via this endpoint instead of
+# NAT Gateway → saves NAT cost, matches architecture diagram.
+
+resource "aws_security_group" "vpc_endpoints" {
+  name        = "${var.project_name}-vpce-sg-${var.environment}"
+  description = "Allow HTTPS from VPC to VPC endpoints"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+    description = "HTTPS from VPC"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.project_name}-vpce-sg-${var.environment}"
+  }
+}
+
+resource "aws_vpc_endpoint" "cloudwatch_logs" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.logs"
+  vpc_endpoint_type   = "Interface"
+  private_dns_enabled = true
+
+  subnet_ids         = aws_subnet.private_app[*].id
+  security_group_ids = [aws_security_group.vpc_endpoints.id]
+
+  tags = {
+    Name = "${var.project_name}-vpce-logs-${var.environment}"
+  }
+}

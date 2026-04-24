@@ -8,6 +8,7 @@ module "networking" {
   private_app_subnet_cidrs  = var.private_app_subnet_cidrs
   private_data_subnet_cidrs = var.private_data_subnet_cidrs
   availability_zones        = var.availability_zones
+  aws_region                = var.aws_region
 }
 
 module "security" {
@@ -112,6 +113,16 @@ module "github_actions_oidc" {
   ecs_task_role_arn           = module.ecs_backend.task_role_arn
 }
 
+# ─── KMS Customer Managed Key ───
+
+module "kms" {
+  source = "../module/KMS"
+
+  project_name = var.project_name
+  environment  = var.environment
+  aws_region   = var.aws_region
+}
+
 # ─── Bedrock Knowledge Base ───
 
 data "aws_caller_identity" "current" {}
@@ -122,9 +133,49 @@ module "bedrock_knowledge_base" {
   project_name = var.project_name
   environment  = var.environment
   aws_region   = var.aws_region
+  kms_key_arn  = module.kms.key_arn
 
   # Pass current caller so they can create the AOSS vector index manually
   additional_access_policy_principals = [
     data.aws_caller_identity.current.arn
   ]
+}
+
+# ─── Bedrock Chat (Lambda + API Gateway) ───
+
+module "bedrock_chat" {
+  source = "../module/BedrockChat"
+
+  project_name      = var.project_name
+  environment       = var.environment
+  aws_region        = var.aws_region
+  knowledge_base_id = module.bedrock_knowledge_base.knowledge_base_id
+  model_id          = "us.meta.llama4-scout-17b-instruct-v1:0"
+  allowed_origin    = "https://app.group9.id.vn"
+}
+
+# ─── Centralized Logs (S3 bucket + Firehose export) ───
+
+module "centralized_logs" {
+  source = "../module/CentralizedLogs"
+
+  project_name = var.project_name
+  environment  = var.environment
+  aws_region   = var.aws_region
+  kms_key_arn  = module.kms.key_arn
+
+  log_exports = {
+    ecs-backend = {
+      log_group_name = module.ecs_backend.cloudwatch_log_group_name
+      s3_prefix      = "ecs-backend"
+    }
+    lambda-chat = {
+      log_group_name = module.bedrock_chat.lambda_log_group_name
+      s3_prefix      = "lambda-chat"
+    }
+    api-gateway = {
+      log_group_name = module.bedrock_chat.api_gw_log_group_name
+      s3_prefix      = "api-gateway"
+    }
+  }
 }

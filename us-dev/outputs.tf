@@ -74,6 +74,10 @@ output "github_oidc_provider_arn" {
   value = var.enable_github_actions_oidc ? module.github_actions_oidc[0].oidc_provider_arn : null
 }
 
+output "cloudwatch_log_group_name" {
+  value = module.ecs_backend.cloudwatch_log_group_name
+}
+
 # ─── Bedrock Knowledge Base ───
 
 output "bedrock_knowledge_base_id" {
@@ -104,4 +108,30 @@ output "bedrock_opensearch_collection_name" {
 output "bedrock_vector_index_name" {
   description = "Vector index name (create manually after first apply)"
   value       = module.bedrock_knowledge_base.vector_index_name
+}
+
+# ─── Bedrock Chat API ───
+
+output "chat_api_url" {
+  description = "Chat API endpoint URL (POST /chat)"
+  value       = module.bedrock_chat.api_gateway_url
+}
+
+output "chat_lambda_function_name" {
+  description = "Chat Lambda function name"
+  value       = module.bedrock_chat.lambda_function_name
+}
+
+# ─── KMS ───
+
+output "kms_key_arn" {
+  description = "KMS CMK ARN (use in us-dev-static for S3 frontend encryption)"
+  value       = module.kms.key_arn
+}
+
+# ─── Centralized Logs ───
+
+output "log_bucket_name" {
+  description = "S3 log bucket name"
+  value       = module.centralized_logs.bucket_name
 }
