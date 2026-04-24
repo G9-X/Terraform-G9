@@ -1,6 +1,6 @@
 project_name = "xbrain"
 environment  = "us-dev-static"
-aws_region   = "us-east-1"
+aws_region   = "us-west-2"
 
 # Leave empty if you do not use custom domain.
 domain_name    = ""
