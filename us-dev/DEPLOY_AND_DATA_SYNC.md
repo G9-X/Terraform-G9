@@ -73,7 +73,60 @@ mysql -h <WORKSHOP_RDS_ENDPOINT> -P 3306 -u <WORKSHOP_USER> -p -e "SELECT COUNT(
 3. Import sanitized data dump from primary DB.
 4. Run smoke tests against API endpoints.
 
-## 5) Failure handling
+## 6) Lambda Bedrock (AI chat)
+
+### Enable
+
+Set in `terraform.tfvars`:
+
+```hcl
+enable_lambda_bedrock = true
+bedrock_model_id      = "meta.llama3-1-70b-instruct-v1:0"
+bedrock_region        = "us-west-2"
+```
+
+Then apply Terraform. Verify outputs:
+- `lambda_bedrock_api_url`
+- `lambda_bedrock_function_name`
+- `lambda_bedrock_log_group`
+
+### Prerequisites
+
+Before applying, ensure the Bedrock model is enabled in your AWS account:
+
+1. Go to **AWS Console → Amazon Bedrock → Model access** (in `us-west-2`).
+2. Request access to **Meta Llama 3.1 70B Instruct**.
+3. Wait for access to be granted (usually instant for Llama models).
+
+### Call the API
+
+```bash
+curl -X POST <lambda_bedrock_api_url>/chat \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "Hello"}]}'
+```
+
+Expected response:
+```json
+{"reply": "..."}
+```
+
+### Resources created
+
+| Resource | Name pattern |
+|---|---|
+| Lambda | `{project}-bedrock-{env}` |
+| API Gateway (HTTP) | `{project}-bedrock-api-{env}` |
+| IAM Role | `{project}-bedrock-lambda-exec-{env}` |
+| CloudWatch Log Group | `/aws/lambda/{project}-bedrock-{env}` |
+
+### Failure handling
+
+- **403 / AccessDeniedException**: Model not enabled in Bedrock Model access.
+- **Lambda timeout**: Increase `lambda_timeout` (default 30s); large models can be slow on first call.
+- **CORS error**: API Gateway CORS is configured at API level; verify `allow_origins` if restricting to a specific domain.
+
+## 7) Failure handling
 
 - Migration fails:
   - check `BACKEND_DB_CONNECTION_STRING`

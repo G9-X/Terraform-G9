@@ -91,6 +91,19 @@ module "ecs_backend" {
   stripe_webhook_secret     = var.stripe_webhook_secret
 }
 
+module "lambda_bedrock" {
+  count  = var.enable_lambda_bedrock ? 1 : 0
+  source = "../module/Lambda_Bedrock"
+
+  project_name     = var.project_name
+  environment      = var.environment
+  aws_region       = var.aws_region
+  bedrock_model_id = var.bedrock_model_id
+  bedrock_region   = var.bedrock_region
+  lambda_timeout   = var.lambda_timeout
+  lambda_memory    = var.lambda_memory
+}
+
 module "github_actions_oidc" {
   count  = var.enable_github_actions_oidc ? 1 : 0
   source = "../module/GitHubActionsOIDC"

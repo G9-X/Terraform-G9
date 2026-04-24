@@ -222,3 +222,27 @@ variable "backend_container_name" {
   description = "Container name inside ECS task definition"
   default     = "backend"
 }
+
+variable "enable_lambda_bedrock" {
+  type    = bool
+  default = false
+}
+
+variable "bedrock_model_id" {
+  type    = string
+}
+
+variable "bedrock_region" {
+  type    = string
+  default = "us-west-2"
+}
+
+variable "lambda_timeout" {
+  type    = number
+  default = 30
+}
+
+variable "lambda_memory" {
+  type    = number
+  default = 256
+}
