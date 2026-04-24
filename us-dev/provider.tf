@@ -7,6 +7,14 @@ terraform {
       version = "~> 5.0"
     }
   }
+
+  backend "s3" {
+    bucket         = "xbrain-terraform-state"
+    key            = "terraform/xbrain-vpc.tfstate"
+    region         = var.aws_region
+    encrypt        = true
+    dynamodb_table = "terraform-state-lock"
+  }
 }
 
 provider "aws" {

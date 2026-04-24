@@ -77,3 +77,15 @@ output "github_oidc_provider_arn" {
 output "cloudwatch_log_group_name" {
   value = module.ecs_backend.cloudwatch_log_group_name
 }
+
+output "lambda_bedrock_api_url" {
+  value = var.enable_lambda_bedrock ? module.lambda_bedrock[0].api_gateway_url : null
+}
+
+output "lambda_bedrock_function_name" {
+  value = var.enable_lambda_bedrock ? module.lambda_bedrock[0].lambda_function_name : null
+}
+
+output "lambda_bedrock_log_group" {
+  value = var.enable_lambda_bedrock ? module.lambda_bedrock[0].cloudwatch_log_group_name : null
+}
