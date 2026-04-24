@@ -10,7 +10,7 @@ terraform {
 
   backend "s3" {
     bucket         = "xbrain-terraform-state"
-    key            = "terraform/xbrain-vpc.tfstate"
+    key            = "us-dev/terraform.tfstate"
     encrypt        = true
     dynamodb_table = "terraform-state-lock"
   }
