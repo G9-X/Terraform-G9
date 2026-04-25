@@ -17,6 +17,10 @@ on:
       - ".github/workflows/terraform-ci.yml"
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   id-token: write
   contents: read
@@ -38,7 +42,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: ${{ env.TF_WORKING_DIR }}
+        working-directory: ${{ matrix.dir }}
 
     steps:
       - name: Checkout repository
