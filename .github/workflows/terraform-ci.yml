@@ -16,6 +16,15 @@ on:
       - "module/**"
       - ".github/workflows/terraform-ci.yml"
   workflow_dispatch:
+    inputs:
+      action:
+        description: 'Terraform Action (apply or destroy)'
+        type: choice
+        required: true
+        default: 'apply'
+        options:
+          - apply
+          - destroy
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -90,9 +99,16 @@ jobs:
           TF_VAR_backend_desired_count:   ${{ vars.TF_VAR_BACKEND_DESIRED_COUNT }}
           TF_VAR_db_multi_az:             ${{ vars.TF_VAR_DB_MULTI_AZ }}
 
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: terraform apply -auto-approve -input=false
+      - name: Terraform Apply or Destroy
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        run: |
+          if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
+            echo "Running Terraform Destroy..."
+            terraform destroy -auto-approve -input=false
+          else
+            echo "Running Terraform Apply..."
+            terraform apply -auto-approve -input=false
+          fi
         env:
           TF_VAR_db_username:             ${{ secrets.TF_VAR_DB_USERNAME }}
           TF_VAR_db_password:             ${{ secrets.TF_VAR_DB_PASSWORD }}
