@@ -82,44 +82,44 @@ output "cloudwatch_log_group_name" {
 
 output "bedrock_knowledge_base_id" {
   description = "Bedrock Knowledge Base ID"
-  value       = module.bedrock_knowledge_base.knowledge_base_id
+  value       = var.enable_lambda_bedrock ? module.bedrock_knowledge_base[0].knowledge_base_id : null
 }
 
 output "bedrock_data_source_id" {
   description = "Bedrock S3 Data Source ID"
-  value       = module.bedrock_knowledge_base.data_source_id
+  value       = var.enable_lambda_bedrock ? module.bedrock_knowledge_base[0].data_source_id : null
 }
 
 output "bedrock_s3_data_bucket_name" {
   description = "S3 bucket name for KB documents"
-  value       = module.bedrock_knowledge_base.s3_data_bucket_name
+  value       = var.enable_lambda_bedrock ? module.bedrock_knowledge_base[0].s3_data_bucket_name : null
 }
 
 output "bedrock_opensearch_collection_endpoint" {
   description = "OpenSearch Serverless collection endpoint"
-  value       = module.bedrock_knowledge_base.opensearch_collection_endpoint
+  value       = var.enable_lambda_bedrock ? module.bedrock_knowledge_base[0].opensearch_collection_endpoint : null
 }
 
 output "bedrock_opensearch_collection_name" {
   description = "OpenSearch Serverless collection name"
-  value       = module.bedrock_knowledge_base.opensearch_collection_name
+  value       = var.enable_lambda_bedrock ? module.bedrock_knowledge_base[0].opensearch_collection_name : null
 }
 
 output "bedrock_vector_index_name" {
   description = "Vector index name (create manually after first apply)"
-  value       = module.bedrock_knowledge_base.vector_index_name
+  value       = var.enable_lambda_bedrock ? module.bedrock_knowledge_base[0].vector_index_name : null
 }
 
 # ─── Bedrock Chat API ───
 
 output "chat_api_url" {
   description = "Chat API endpoint URL (POST /chat)"
-  value       = module.bedrock_chat.api_gateway_url
+  value       = var.enable_lambda_bedrock ? module.bedrock_chat[0].api_gateway_url : null
 }
 
 output "chat_lambda_function_name" {
   description = "Chat Lambda function name"
-  value       = module.bedrock_chat.lambda_function_name
+  value       = var.enable_lambda_bedrock ? module.bedrock_chat[0].lambda_function_name : null
 }
 
 output "lambda_bedrock_api_url" {
