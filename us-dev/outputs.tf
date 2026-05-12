@@ -78,58 +78,26 @@ output "cloudwatch_log_group_name" {
   value = module.ecs_backend.cloudwatch_log_group_name
 }
 
-# ─── Bedrock Knowledge Base ───
+# ═══════════════════════════════════════
+# GeekBrain AI Outputs
+# ═══════════════════════════════════════
 
-output "bedrock_knowledge_base_id" {
+output "geekbrain_knowledge_base_id" {
   description = "Bedrock Knowledge Base ID"
-  value       = var.enable_lambda_bedrock ? module.bedrock_knowledge_base[0].knowledge_base_id : null
+  value       = var.enable_geekbrain ? module.geekbrain_ai_engine[0].knowledge_base_id : null
 }
 
-output "bedrock_data_source_id" {
-  description = "Bedrock S3 Data Source ID"
-  value       = var.enable_lambda_bedrock ? module.bedrock_knowledge_base[0].data_source_id : null
+output "geekbrain_monitoring_api_url" {
+  description = "Private API Gateway URL for Monitoring Service"
+  value       = var.enable_geekbrain ? module.geekbrain_monitoring[0].api_url : null
 }
 
-output "bedrock_s3_data_bucket_name" {
-  description = "S3 bucket name for KB documents"
-  value       = var.enable_lambda_bedrock ? module.bedrock_knowledge_base[0].s3_data_bucket_name : null
+output "geekbrain_chat_api_url" {
+  description = "API Gateway endpoint for chat (POST /chat)"
+  value       = var.enable_geekbrain ? module.geekbrain_backend[0].api_gateway_url : null
 }
 
-output "bedrock_opensearch_collection_endpoint" {
-  description = "OpenSearch Serverless collection endpoint"
-  value       = var.enable_lambda_bedrock ? module.bedrock_knowledge_base[0].opensearch_collection_endpoint : null
-}
-
-output "bedrock_opensearch_collection_name" {
-  description = "OpenSearch Serverless collection name"
-  value       = var.enable_lambda_bedrock ? module.bedrock_knowledge_base[0].opensearch_collection_name : null
-}
-
-output "bedrock_vector_index_name" {
-  description = "Vector index name (create manually after first apply)"
-  value       = var.enable_lambda_bedrock ? module.bedrock_knowledge_base[0].vector_index_name : null
-}
-
-# ─── Bedrock Chat API ───
-
-output "chat_api_url" {
-  description = "Chat API endpoint URL (POST /chat)"
-  value       = var.enable_lambda_bedrock ? module.bedrock_chat[0].api_gateway_url : null
-}
-
-output "chat_lambda_function_name" {
-  description = "Chat Lambda function name"
-  value       = var.enable_lambda_bedrock ? module.bedrock_chat[0].lambda_function_name : null
-}
-
-output "lambda_bedrock_api_url" {
-  value = var.enable_lambda_bedrock ? module.lambda_bedrock[0].api_gateway_url : null
-}
-
-output "lambda_bedrock_function_name" {
-  value = var.enable_lambda_bedrock ? module.lambda_bedrock[0].lambda_function_name : null
-}
-
-output "lambda_bedrock_log_group" {
-  value = var.enable_lambda_bedrock ? module.lambda_bedrock[0].cloudwatch_log_group_name : null
+output "geekbrain_chat_lambda" {
+  description = "Main Chat Lambda function name"
+  value       = var.enable_geekbrain ? module.geekbrain_backend[0].lambda_function_name : null
 }

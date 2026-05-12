@@ -29,3 +29,15 @@ variable "private_data_subnet_cidrs" {
 variable "availability_zones" {
   type = list(string)
 }
+
+variable "aws_region" {
+  description = "AWS region for VPC endpoint service name"
+  type        = string
+}
+
+variable "endpoint_security_group_id" {
+  description = "Security group ID for VPC Interface Endpoints"
+  type        = string
+  default     = ""
+}
+

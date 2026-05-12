@@ -1,0 +1,277 @@
+# Merge W3 + W4 Terraform cho W5 (Final)
+
+## Quyết định đã thống nhất
+
+| Câu hỏi | Quyết định |
+|----------|-----------|
+| **Region** | `us-east-1` (cho Bedrock Agent + DeepSeek V3.2) |
+| **RDS PostgreSQL** | **Không deploy** — note vào devlog. `query_database` tool sẽ trả lỗi graceful nếu chưa có DB |
+| **Terraform State** | S3 backend + DynamoDB lock (như W4) |
+| **Lambda networking** | VPC Endpoint cho `execute-api` (KHÔNG dùng NAT GW) — giống W4 |
+| **Data package** | Copy vào Terraform-G9 |
+| **Old Bedrock modules** | Xóa khỏi code (`Lambda_Bedrock`, `BedrockKnowledgeBase`, `BedrockChat`) |
+
+---
+
+## Kiến trúc sau merge
+
+```
+                    ┌────────────────────────────┐
+                    │  CloudFront (us-dev-static) │
+                    │  Merxly React Frontend      │
+                    │  + AI Chat Widget (nhỏ)     │
+                    └──────────┬─────────────────┘
+                               │
+                ┌──────────────┼──────────────┐
+                │              │              │
+         ┌──────▼──────┐ ┌────▼─────┐  ┌─────▼──────────┐
+         │  ALB (ECS)  │ │ REST API │  │ Private API GW │
+         │  .NET App   │ │ /chat    │  │ Monitoring API │
+         └──────┬──────┘ └────┬─────┘  └─────┬──────────┘
+                │              │              │
+      ┌─────────▼────┐  ┌─────▼──────┐  ┌────▼──────────┐
+      │ ECS Tasks    │  │Chat Lambda │  │Monitoring     │
+      │ (priv-app)   │  │(no VPC)    │  │Lambda (no VPC)│
+      └──────┬───────┘  └─────┬──────┘  └───────────────┘
+             │                │                  ▲
+             │          ┌─────▼──────┐           │
+             │          │Bedrock     │           │
+             │          │Agent       │     VPC Endpoint
+             │          │(DeepSeek)  │    (execute-api)
+             │          └─────┬──────┘           │
+             │           ┌────┴────┐             │
+             │     ┌─────▼───┐ ┌──▼────────┐    │
+             │     │KB (AOSS │ │Action Grp │    │
+             │     │+S3 docs)│ │Lambda     ├────┘
+             │     └─────────┘ │(priv-app) │
+             │                 └───────────┘
+     ┌───────▼───┐
+     │RDS MySQL  │  ← (giữ cho e-commerce app)
+     │(priv-data)│
+     └───────────┘
+```
+
+**Key**: Action Group Lambda ở private-app subnet → gọi Monitoring Private API GW qua **VPC Interface Endpoint** (private DNS). Không cần NAT GW.
+
+---
+
+## Proposed Changes — Chi tiết file-by-file
+
+### Component 1: Copy W4 resources vào Terraform-G9
+
+#### [NEW] `data_package/` — copy từ `G9-W4/data_package/`
+- `knowledge_base/*.md` (36 files)
+- `structured_data/*.csv` (4 files)
+
+#### [NEW] `lambda/geekbrain/` — copy từ `G9-W4/lambda/`
+- `lambda_function.py` — Main chat Lambda (invoke Bedrock Agent)
+- `action_group_function.py` — Tool execution Lambda
+- `build.py`, `requirements.txt`
+
+#### [NEW] `monitoring_lambda/` — copy từ `G9-W4/monitoring_lambda/`
+- `monitoring_api.py`, `handler.py`, `build.py`, `requirements.txt`
+
+---
+
+### Component 2: Networking Module
+
+#### [MODIFY] [main.tf](file:///c:/Users/Tan/Desktop/G9-W2/Terraform-G9/module/Networking/main.tf)
+
+Thêm VPC Interface Endpoint cho `execute-api`:
+
+```hcl
+# VPC Interface Endpoint for API Gateway (Monitoring API private access)
+resource "aws_vpc_endpoint" "apigw" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.execute-api"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.private_app[*].id
+  security_group_ids  = [var.endpoint_security_group_id]
+  private_dns_enabled = true
+}
+```
+
+> Endpoint gắn ở **private-app** subnets — nơi Action Group Lambda sẽ chạy.
+
+#### [MODIFY] [variables.tf](file:///c:/Users/Tan/Desktop/G9-W2/Terraform-G9/module/Networking/variables.tf)
+- Thêm `variable "aws_region"` và `variable "endpoint_security_group_id"`
+
+#### [MODIFY] [outputs.tf](file:///c:/Users/Tan/Desktop/G9-W2/Terraform-G9/module/Networking/outputs.tf)
+- Thêm `output "vpc_endpoint_id"`
+
+---
+
+### Component 3: Security Module
+
+#### [MODIFY] [main.tf](file:///c:/Users/Tan/Desktop/G9-W2/Terraform-G9/module/Security/main.tf)
+
+Thêm 2 Security Group mới:
+
+```hcl
+# Lambda SG (Action Group + future Seed Lambda)
+resource "aws_security_group" "lambda" {
+  name   = "${var.project_name}-lambda-sg-${var.environment}"
+  vpc_id = var.vpc_id
+  egress { from_port=0; to_port=0; protocol="-1"; cidr_blocks=["0.0.0.0/0"] }
+}
+
+# VPC Endpoint SG (HTTPS 443 from Lambda)
+resource "aws_security_group" "endpoint" {
+  name   = "${var.project_name}-endpoint-sg-${var.environment}"
+  vpc_id = var.vpc_id
+  ingress { from_port=443; to_port=443; protocol="tcp"; security_groups=[aws_security_group.lambda.id] }
+  egress  { from_port=0; to_port=0; protocol="-1"; cidr_blocks=["0.0.0.0/0"] }
+}
+```
+
+#### [MODIFY] [outputs.tf](file:///c:/Users/Tan/Desktop/G9-W2/Terraform-G9/module/Security/outputs.tf)
+- Thêm: `lambda_security_group_id`, `endpoint_security_group_id`
+
+---
+
+### Component 4: Terraform Modules mới (GeekBrain AI)
+
+#### [NEW] `module/GeekBrain_AI_Engine/` — adapt từ W4 `ai_engine`
+- `main.tf` — S3 KB bucket, OpenSearch Serverless, Bedrock KB, data source, ingestion sync
+- `variables.tf` — project, name_suffix, tags, region, account_id, embedding_model_id, kb_docs_path
+- `outputs.tf` — knowledge_base_id, kb_docs_bucket, opensearch_collection_endpoint
+
+**Thay đổi so với W4**: Region parameterized (không hardcode us-east-1)
+
+---
+
+#### [NEW] `module/GeekBrain_Backend/` — adapt từ W4 `backend`
+- `main.tf` — Bedrock Agent + instructions, Action Group (7 tools), Main Lambda, REST API Gateway
+- `variables.tf` — project, region, account_id, llm_model_id, knowledge_base_id, monitoring_api_url, private_app_subnet_ids, lambda_sg_id
+- `outputs.tf` — api_gateway_url, lambda_function_name
+
+**Thay đổi so với W4**:
+- Action Group Lambda: dùng `private_app_subnet_ids` + `lambda_sg_id` từ W3 modules
+- DB env vars: để trống (vì chưa deploy PostgreSQL) → `action_group_function.py` xử lý graceful
+- **Bỏ** `db_host`, `db_name`, `db_user`, `db_password` variables — thay bằng optional
+
+---
+
+#### [NEW] `module/GeekBrain_Monitoring/` — adapt từ W4 `monitoring_api`
+- `main.tf` — FastAPI Lambda + Private API Gateway
+- `variables.tf` — project, tags, vpc_endpoint_id
+- `outputs.tf` — api_url
+
+**Giữ nguyên** so với W4 — Private API GW chỉ accessible qua VPC Endpoint.
+
+---
+
+### Component 5: Root config `us-dev/`
+
+#### [MODIFY] [provider.tf](file:///c:/Users/Tan/Desktop/G9-W2/Terraform-G9/us-dev/provider.tf)
+- Đổi region → `us-east-1`
+- Thêm S3 backend block
+- Thêm required providers: `opensearch`, `time`
+
+#### [MODIFY] [main.tf](file:///c:/Users/Tan/Desktop/G9-W2/Terraform-G9/us-dev/main.tf)
+- **Xóa**: `module "lambda_bedrock"`, `module "bedrock_knowledge_base"`, `module "bedrock_chat"`, `data "aws_caller_identity"`
+- **Thêm** 3 modules mới + wire vào networking/security:
+
+```hcl
+module "geekbrain_ai_engine" {
+  source        = "../module/GeekBrain_AI_Engine"
+  project       = var.project_name
+  ...
+  kb_docs_path  = var.geekbrain_kb_docs_path  # "../data_package/knowledge_base"
+}
+
+module "geekbrain_monitoring" {
+  source          = "../module/GeekBrain_Monitoring"
+  vpc_endpoint_id = module.networking.vpc_endpoint_id
+  ...
+}
+
+module "geekbrain_backend" {
+  source              = "../module/GeekBrain_Backend"
+  knowledge_base_id   = module.geekbrain_ai_engine.knowledge_base_id
+  monitoring_api_url  = module.geekbrain_monitoring.api_url
+  private_app_subnet_ids = module.networking.private_app_subnet_ids
+  lambda_sg_id        = module.security.lambda_security_group_id
+  ...
+}
+```
+
+#### [MODIFY] [variables.tf](file:///c:/Users/Tan/Desktop/G9-W2/Terraform-G9/us-dev/variables.tf)
+- Đổi region default → `us-east-1`
+- Đổi AZ defaults → `us-east-1a`, `us-east-1b`
+- Xóa: `enable_lambda_bedrock`, `bedrock_model_id`, `bedrock_region`, `lambda_timeout`, `lambda_memory`
+- Thêm: `enable_geekbrain` (bool), `geekbrain_llm_model_id`, `geekbrain_embedding_model_id`, `geekbrain_kb_docs_path`, `geekbrain_retrieval_k`
+
+#### [MODIFY] [outputs.tf](file:///c:/Users/Tan/Desktop/G9-W2/Terraform-G9/us-dev/outputs.tf)
+- Xóa outputs cũ (chat_api_url, chat_lambda, lambda_bedrock_*, bedrock_*)
+- Thêm: `geekbrain_chat_api_url`, `geekbrain_knowledge_base_id`, `geekbrain_monitoring_api_url`
+
+---
+
+### Component 6: Frontend (Merxly) — Sửa AiChatProvider
+
+#### [MODIFY] [AiChatProvider.tsx](file:///c:/Users/Tan/Desktop/G9-W2/Merxly-XB9/merxly_frontend/src/components/AiChatProvider.tsx)
+
+Sửa logic gọi API để match W4 format:
+
+```tsx
+// TRƯỚC (W3 — gọi Lambda_Bedrock, gửi messages array)
+body: JSON.stringify({ messages: formattedMessages })
+const reply = data.reply ?? data.body;
+
+// SAU (W4-style — gọi Bedrock Agent, gửi question + session_id)
+body: JSON.stringify({ question: lastMessage, session_id: getSessionId() })
+const reply = data.answer;
+```
+
+- Thêm `getSessionId()` (lưu vào `sessionStorage`, giống W4)
+- Chỉ gửi tin nhắn cuối cùng (Bedrock Agent tự quản lý memory qua session)
+- Parse `data.answer` thay vì `data.reply`
+- **Không** hiện tracing/tools/sources — giữ UI nhỏ gọn
+
+---
+
+### Component 7: Cleanup
+
+#### [DELETE] `module/Lambda_Bedrock/` — thay bằng GeekBrain_Backend
+#### [DELETE] `module/BedrockKnowledgeBase/` — thay bằng GeekBrain_AI_Engine  
+#### [DELETE] `module/BedrockChat/` — thay bằng GeekBrain_Backend
+
+---
+
+## Danh sách task thực thi
+
+1. Copy `data_package/`, `lambda/geekbrain/`, `monitoring_lambda/` vào Terraform-G9
+2. Tạo `module/GeekBrain_AI_Engine/` (adapt từ W4)
+3. Tạo `module/GeekBrain_Backend/` (adapt từ W4)
+4. Tạo `module/GeekBrain_Monitoring/` (adapt từ W4)
+5. Sửa `module/Networking/` — thêm VPC Endpoint
+6. Sửa `module/Security/` — thêm Lambda SG + Endpoint SG
+7. Sửa `us-dev/provider.tf` — region + S3 backend
+8. Sửa `us-dev/main.tf` — xóa cũ, thêm mới
+9. Sửa `us-dev/variables.tf` — đổi region, thêm geekbrain vars
+10. Sửa `us-dev/outputs.tf` — đổi outputs
+11. Xóa 3 module cũ
+12. Sửa `AiChatProvider.tsx` — session_id + W4 API format
+13. Validate: `terraform init` + `terraform validate`
+
+---
+
+## Verification Plan
+
+### Automated
+```bash
+cd us-dev && terraform init && terraform validate
+terraform plan  # kiểm tra resource count
+```
+
+### Manual (sau deploy)
+```bash
+# Test chat API
+curl -X POST <api_gw_url>/chat \
+  -H "Content-Type: application/json" \
+  -d '{"question":"Who leads Team Platform?","session_id":"test-123"}'
+
+# Verify frontend chat widget
+# Mở Merxly app → click bot icon → hỏi câu hỏi → nhận trả lời
+```

@@ -10,13 +10,14 @@ variable "environment" {
 
 variable "aws_region" {
   type    = string
-  default = "us-west-2"
+  default = "us-east-1"
 }
 
 variable "availability_zones" {
   type    = list(string)
-  default = ["us-west-2a", "us-west-2b"]
+  default = ["us-east-1a", "us-east-1b"]
 }
+
 
 variable "vpc_cidr" {
   type    = string
@@ -223,27 +224,28 @@ variable "backend_container_name" {
   default     = "backend"
 }
 
-variable "enable_lambda_bedrock" {
+variable "enable_geekbrain" {
   type    = bool
-  default = false
+  default = true
 }
 
-variable "bedrock_model_id" {
+variable "geekbrain_llm_model_id" {
   type    = string
-  default = "us.deepseek.deepseek-r1-v1:0"
+  default = "us.meta.llama3-2-3b-instruct-v1:0" # Change based on us-east-1 availability
 }
 
-variable "bedrock_region" {
+variable "geekbrain_embedding_model_id" {
   type    = string
-  default = "us-west-2"
+  default = "amazon.titan-embed-text-v2:0"
 }
 
-variable "lambda_timeout" {
-  type    = number
-  default = 30
+variable "geekbrain_kb_docs_path" {
+  type    = string
+  default = "../data_package/knowledge_base"
 }
 
-variable "lambda_memory" {
+variable "geekbrain_retrieval_k" {
   type    = number
-  default = 256
+  default = 10
 }
+

@@ -6,13 +6,23 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    opensearch = {
+      source  = "opensearch-project/opensearch"
+      version = "~> 2.3"
+    }
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.11.1"
+    }
   }
+
 
   backend "s3" {
     bucket         = "xbrain-terraform-state"
     key            = "us-dev/terraform.tfstate"
     encrypt        = true
     dynamodb_table = "terraform-state-lock"
+    region         = "us-east-1"
   }
 }
 

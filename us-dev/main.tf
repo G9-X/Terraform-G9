@@ -91,19 +91,6 @@ module "ecs_backend" {
   stripe_webhook_secret     = var.stripe_webhook_secret
 }
 
-module "lambda_bedrock" {
-  count  = var.enable_lambda_bedrock ? 1 : 0
-  source = "../module/Lambda_Bedrock"
-
-  project_name     = var.project_name
-  environment      = var.environment
-  aws_region       = var.aws_region
-  bedrock_model_id = var.bedrock_model_id
-  bedrock_region   = var.bedrock_region
-  lambda_timeout   = var.lambda_timeout
-  lambda_memory    = var.lambda_memory
-}
-
 module "github_actions_oidc" {
   count  = var.enable_github_actions_oidc ? 1 : 0
   source = "../module/GitHubActionsOIDC"
@@ -125,34 +112,59 @@ module "github_actions_oidc" {
   ecs_task_role_arn           = module.ecs_backend.task_role_arn
 }
 
-# ─── Bedrock Knowledge Base ───
-
 data "aws_caller_identity" "current" {}
 
-module "bedrock_knowledge_base" {
-  count  = var.enable_lambda_bedrock ? 1 : 0
-  source = "../module/BedrockKnowledgeBase"
+# ═══════════════════════════════════════
+# GeekBrain AI Modules
+# ═══════════════════════════════════════
 
-  project_name = var.project_name
-  environment  = var.environment
-  aws_region   = var.aws_region
+module "geekbrain_ai_engine" {
+  count  = var.enable_geekbrain ? 1 : 0
+  source = "../module/GeekBrain_AI_Engine"
 
-  # Pass current caller so they can create the AOSS vector index manually
-  additional_access_policy_principals = [
-    data.aws_caller_identity.current.arn
-  ]
+  project            = var.project_name
+  name_suffix        = var.environment
+  region             = var.aws_region
+  account_id         = data.aws_caller_identity.current.account_id
+  embedding_model_id = var.geekbrain_embedding_model_id
+  kb_docs_path       = var.geekbrain_kb_docs_path
+
+  tags = {
+    Environment = var.environment
+    Component   = "AIEngine"
+  }
 }
 
-# ─── Bedrock Chat (Lambda + API Gateway) ───
+module "geekbrain_monitoring" {
+  count  = var.enable_geekbrain ? 1 : 0
+  source = "../module/GeekBrain_Monitoring"
 
-module "bedrock_chat" {
-  count  = var.enable_lambda_bedrock ? 1 : 0
-  source = "../module/BedrockChat"
+  project         = var.project_name
+  vpc_endpoint_id = module.networking.vpc_endpoint_id
 
-  project_name      = var.project_name
-  environment       = var.environment
-  aws_region        = var.aws_region
-  knowledge_base_id = var.enable_lambda_bedrock ? module.bedrock_knowledge_base[0].knowledge_base_id : ""
-  model_id          = "us.meta.llama4-scout-17b-instruct-v1:0"
-  allowed_origin    = "https://app.group9.id.vn"
+  tags = {
+    Environment = var.environment
+    Component   = "Monitoring"
+  }
+}
+
+module "geekbrain_backend" {
+  count  = var.enable_geekbrain ? 1 : 0
+  source = "../module/GeekBrain_Backend"
+
+  project            = var.project_name
+  region             = var.aws_region
+  account_id         = data.aws_caller_identity.current.account_id
+  llm_model_id       = var.geekbrain_llm_model_id
+  knowledge_base_id  = module.geekbrain_ai_engine[0].knowledge_base_id
+  monitoring_api_url = module.geekbrain_monitoring[0].api_url
+  retrieval_k        = var.geekbrain_retrieval_k
+
+  private_subnet_ids = module.networking.private_app_subnet_ids
+  lambda_sg_id       = module.security.lambda_security_group_id
+
+  tags = {
+    Environment = var.environment
+    Component   = "Backend"
+  }
 }
