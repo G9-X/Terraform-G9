@@ -37,3 +37,8 @@ provider "aws" {
     }
   }
 }
+
+provider "opensearch" {
+  url         = var.enable_geekbrain ? module.geekbrain_ai_engine[0].opensearch_collection_endpoint : "https://localhost:9200"
+  healthcheck = false
+}
