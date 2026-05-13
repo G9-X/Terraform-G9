@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XBrain — AWS Architecture Diagram</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0a0e1a;color:#e0e6f0;min-height:100vh;padding:20px}
+h1{text-align:center;font-size:2.2rem;background:linear-gradient(135deg,#60a5fa,#a78bfa,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+.subtitle{text-align:center;color:#94a3b8;margin-bottom:30px;font-size:.95rem}
+.grid{display:grid;grid-template-columns:1fr;gap:24px;max-width:1400px;margin:0 auto}
+@media(min-width:900px){.grid{grid-template-columns:1fr 1fr}}
+.card{background:linear-gradient(145deg,#111827,#1e293b);border:1px solid #1e3a5f;border-radius:16px;padding:24px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
+.card:hover{transform:translateY(-3px);box-shadow:0 8px 32px rgba(96,165,250,.15)}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:16px 16px 0 0}
+.card.net::before{background:linear-gradient(90deg,#3b82f6,#06b6d4)}
+.card.sec::before{background:linear-gradient(90deg,#ef4444,#f97316)}
+.card.compute::before{background:linear-gradient(90deg,#8b5cf6,#a78bfa)}
+.card.data::before{background:linear-gradient(90deg,#10b981,#34d399)}
+.card.ai::before{background:linear-gradient(90deg,#f472b6,#fb923c)}
+.card.cicd::before{background:linear-gradient(90deg,#6366f1,#818cf8)}
+.card.static::before{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.card-title{font-size:1.2rem;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.badge{display:inline-block;font-size:.65rem;padding:2px 8px;border-radius:99px;font-weight:600;letter-spacing:.5px}
+.badge-blue{background:#1e3a5f;color:#60a5fa}
+.badge-green{background:#064e3b;color:#34d399}
+.badge-purple{background:#3b0764;color:#c084fc}
+.badge-pink{background:#4c0519;color:#fb7185}
+.badge-orange{background:#431407;color:#fb923c}
+.badge-yellow{background:#422006;color:#fbbf24}
+ul{list-style:none;padding:0}
+li{padding:6px 0;border-bottom:1px solid #1e293b;font-size:.88rem;display:flex;align-items:flex-start;gap:6px}
+li:last-child{border:none}
+li .icon{flex-shrink:0;width:18px;text-align:center}
+.resource{color:#93c5fd;font-weight:600}
+.detail{color:#94a3b8}
+.flow-section{max-width:1400px;margin:30px auto 0;background:linear-gradient(145deg,#111827,#1e293b);border:1px solid #1e3a5f;border-radius:16px;padding:24px}
+.flow-section h2{font-size:1.3rem;margin-bottom:16px;color:#60a5fa}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:.85rem}
+.flow-item{background:#1e293b;border:1px solid #334155;border-radius:8px;padding:6px 14px;white-space:nowrap}
+.flow-arrow{color:#60a5fa;font-weight:700;font-size:1.1rem}
+.full-width{grid-column:1/-1}
+table{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:8px}
+th{text-align:left;padding:8px;background:#0f172a;color:#94a3b8;border-bottom:1px solid #334155;font-weight:600}
+td{padding:8px;border-bottom:1px solid #1e293b}
+.tag{display:inline-block;font-size:.7rem;padding:1px 6px;border-radius:4px;margin-right:4px;background:#1e3a5f;color:#93c5fd}
+</style>
+</head>
+<body>
+
+<h1>🏗️ XBrain — AWS Infrastructure Architecture</h1>
+<p class="subtitle">Project: <strong>xbrain</strong> &nbsp;|&nbsp; Region: <strong>us-east-1</strong> &nbsp;|&nbsp; Environment: <strong>us-dev</strong> &nbsp;|&nbsp; State: S3 + DynamoDB Lock &nbsp;|&nbsp; Terraform ≥ 1.0, AWS Provider ~5.0</p>
+
+<div class="grid">
+
+<!-- NETWORKING -->
+<div class="card net">
+  <div class="card-title">🌐 Networking <span class="badge badge-blue">module/Networking</span></div>
+  <ul>
+    <li><span class="icon">☁️</span><div><span class="resource">VPC</span> — CIDR <code>10.50.0.0/16</code>, DNS support + hostnames enabled</div></li>
+    <li><span class="icon">🌍</span><div><span class="resource">Internet Gateway</span> — Attached to VPC</div></li>
+    <li><span class="icon">📦</span><div><span class="resource">Public Subnets ×2</span> — <code>10.50.1.0/24</code>, <code>10.50.2.0/24</code> (us-east-1a, 1b) — auto-assign public IP</div></li>
+    <li><span class="icon">🔒</span><div><span class="resource">Private App Subnets ×2</span> — <code>10.50.11.0/24</code>, <code>10.50.12.0/24</code> — ECS + Lambda</div></li>
+    <li><span class="icon">💾</span><div><span class="resource">Private Data Subnets ×2</span> — <code>10.50.21.0/24</code>, <code>10.50.22.0/24</code> — RDS only, no internet</div></li>
+    <li><span class="icon">🔀</span><div><span class="resource">NAT Gateways ×2</span> — 1 per AZ, each with Elastic IP. Private App → Internet</div></li>
+    <li><span class="icon">🗺️</span><div><span class="resource">Route Tables</span> — Public→IGW, Private App→NAT (per AZ), Private Data→isolated</div></li>
+  </ul>
+</div>
+
+<!-- SECURITY -->
+<div class="card sec">
+  <div class="card-title">🛡️ Security Groups <span class="badge badge-orange">module/Security</span></div>
+  <ul>
+    <li><span class="icon">⚖️</span><div><span class="resource">ALB SG</span> — Inbound: 80 + 443 from 0.0.0.0/0 | Outbound: all</div></li>
+    <li><span class="icon">📦</span><div><span class="resource">Backend SG</span> — Inbound: port 8080 from ALB SG only | Outbound: all</div></li>
+    <li><span class="icon">💾</span><div><span class="resource">RDS SG</span> — Inbound: 3306 from Backend SG + Lambda SG | Outbound: all</div></li>
+    <li><span class="icon">⚡</span><div><span class="resource">Lambda SG</span> — Inbound: none | Outbound: all (Bedrock Action Group)</div></li>
+  </ul>
+</div>
+
+<!-- ALB -->
+<div class="card compute">
+  <div class="card-title">⚖️ Application Load Balancer <span class="badge badge-purple">module/ALB</span></div>
+  <ul>
+    <li><span class="icon">🌐</span><div><span class="resource">ALB</span> — Internet-facing, in public subnets, attached to ALB SG</div></li>
+    <li><span class="icon">🎯</span><div><span class="resource">Target Group</span> — IP-based, port 8080/HTTP, health check <code>/health</code></div></li>
+    <li><span class="icon">👂</span><div><span class="resource">HTTP Listener</span> — Port 80 → forward to target group</div></li>
+  </ul>
+</div>
+
+<!-- ECR -->
+<div class="card compute">
+  <div class="card-title">📦 Container Registry <span class="badge badge-purple">module/ECR</span></div>
+  <ul>
+    <li><span class="icon">🐳</span><div><span class="resource">ECR Repository</span> — Mutable tags, scan-on-push, AES256 encryption</div></li>
+    <li><span class="icon">♻️</span><div><span class="resource">Lifecycle Policy</span> — Keep latest 20 images, expire older</div></li>
+  </ul>
+</div>
+
+<!-- ECS -->
+<div class="card compute full-width">
+  <div class="card-title">🚀 ECS Backend (EC2 Launch Type) <span class="badge badge-purple">module/ECS_Backend</span></div>
+  <ul>
+    <li><span class="icon">🏢</span><div><span class="resource">ECS Cluster</span> — EC2 capacity provider with managed scaling (target 100%)</div></li>
+    <li><span class="icon">💻</span><div><span class="resource">EC2 Auto Scaling Group</span> — t3.small, min 1 / max 2 / desired 1, ECS-optimized AMI, IMDSv2 required</div></li>
+    <li><span class="icon">📋</span><div><span class="resource">Task Definition</span> — awsvpc mode, 256 CPU / 512 MiB, ASP.NET Core backend container on port 8080</div></li>
+    <li><span class="icon">🔐</span><div><span class="resource">Secrets Manager ×8</span> — DB connection, JWT secret, Cloudinary (3), Stripe (3) — injected via ECS secrets</div></li>
+    <li><span class="icon">👤</span><div><span class="resource">IAM Roles</span> — Execution Role (ECR pull + Secrets read), Task Role, Instance Role (EC2 + SSM)</div></li>
+    <li><span class="icon">📊</span><div><span class="resource">CloudWatch Logs</span> — <code>/ecs/xbrain/backend/us-dev</code>, 14-day retention</div></li>
+    <li><span class="icon">🔗</span><div><span class="resource">ECS Service</span> — Registered with ALB target group, runs in private app subnets, no public IP</div></li>
+  </ul>
+</div>
+
+<!-- DATABASE -->
+<div class="card data">
+  <div class="card-title">💾 RDS MySQL <span class="badge badge-green">module/Database_MySQL</span></div>
+  <ul>
+    <li><span class="icon">🗄️</span><div><span class="resource">RDS Instance</span> — MySQL 8.0, db.t3.small, Multi-AZ enabled</div></li>
+    <li><span class="icon">💿</span><div><span class="resource">Storage</span> — gp3, 20 GB initial → 100 GB auto-scale, encrypted at rest</div></li>
+    <li><span class="icon">🔒</span><div><span class="resource">Network</span> — Private data subnets, NOT publicly accessible, port 3306</div></li>
+    <li><span class="icon">📂</span><div><span class="resource">Database</span> — Name: <code>xbrain</code></div></li>
+  </ul>
+</div>
+
+<!-- DATABASE MSSQL (available module) -->
+<div class="card data">
+  <div class="card-title">💾 RDS MSSQL <span class="badge badge-green">module/Database_MSSQL</span> <span class="tag">Available but unused</span></div>
+  <ul>
+    <li><span class="icon">🗄️</span><div><span class="resource">RDS Instance</span> — SQL Server, license-included, port 1433</div></li>
+    <li><span class="icon">💿</span><div><span class="resource">Storage</span> — gp3, encrypted, Multi-AZ capable</div></li>
+    <li><span class="icon">📝</span><div><span class="detail">Module exists but not invoked in us-dev/main.tf</span></div></li>
+  </ul>
+</div>
+
+<!-- GEEKBRAIN AI ENGINE -->
+<div class="card ai full-width">
+  <div class="card-title">🧠 GeekBrain AI Engine <span class="badge badge-pink">module/GeekBrain_AI_Engine</span></div>
+  <ul>
+    <li><span class="icon">📚</span><div><span class="resource">S3 Bucket (KB Docs)</span> — 36 markdown docs + metadata JSON auto-uploaded from <code>data_package/knowledge_base/</code></div></li>
+    <li><span class="icon">🔍</span><div><span class="resource">OpenSearch Serverless</span> — VECTORSEARCH collection, HNSW/faiss index (1024-dim), encryption + network + data access policies</div></li>
+    <li><span class="icon">🧬</span><div><span class="resource">Bedrock Knowledge Base</span> — Embedding: <code>amazon.titan-embed-text-v2:0</code>, hierarchical chunking (1500/300 tokens, 60 overlap)</div></li>
+    <li><span class="icon">📥</span><div><span class="resource">S3 Data Source</span> — Auto-ingestion triggered via <code>null_resource</code> with polling (up to 10 min)</div></li>
+    <li><span class="icon">🔑</span><div><span class="resource">IAM Role</span> — bedrock.amazonaws.com principal, S3 read + AOSS API + InvokeModel permissions</div></li>
+  </ul>
+</div>
+
+<!-- GEEKBRAIN BACKEND -->
+<div class="card ai full-width">
+  <div class="card-title">🤖 GeekBrain Backend (Agent + Lambda + API GW) <span class="badge badge-pink">module/GeekBrain_Backend</span></div>
+  <table>
+    <tr><th>Component</th><th>Details</th></tr>
+    <tr><td><span class="resource">Bedrock Agent</span></td><td>LLM: <code>us.meta.llama3-2-3b-instruct-v1:0</code>, session TTL 30min, KB association enabled, 6 tool functions defined</td></tr>
+    <tr><td><span class="resource">Agent Alias</span></td><td><code>prod</code> alias, auto-prepared via CLI before alias creation</td></tr>
+    <tr><td><span class="resource">Chat Lambda</span></td><td>Python 3.12, 256 MB, 120s timeout — invokes Bedrock Agent with hybrid KB search (top-10)</td></tr>
+    <tr><td><span class="resource">Action Group Lambda</span></td><td>Python 3.12, 256 MB, 30s timeout — runs in VPC (private app subnets) — connects to RDS via psycopg2</td></tr>
+    <tr><td><span class="resource">API Gateway (REST)</span></td><td>Regional endpoint, <code>POST /chat</code> → Lambda proxy, CORS enabled (<code>OPTIONS</code> mock)</td></tr>
+    <tr><td><span class="resource">IAM Roles ×2</span></td><td>Chat Lambda → InvokeAgent | Action Group → VPC execution + DB access</td></tr>
+  </table>
+  <div style="margin-top:12px">
+    <strong style="color:#f472b6">Agent Tools (Action Group):</strong>
+    <span class="tag">query_database</span>
+    <span class="tag">get_service_status</span>
+    <span class="tag">get_service_metrics</span>
+    <span class="tag">list_services</span>
+    <span class="tag">get_incident_history</span>
+    <span class="tag">compare_services</span>
+  </div>
+</div>
+
+<!-- STATIC FRONTEND -->
+<div class="card static">
+  <div class="card-title">🌐 Static Frontend <span class="badge badge-yellow">us-dev-static</span></div>
+  <ul>
+    <li><span class="icon">🪣</span><div><span class="resource">S3 Bucket (Private)</span> — AES256, all public access blocked, OAC-only</div></li>
+    <li><span class="icon">☁️</span><div><span class="resource">CloudFront Distribution</span> — OAC to S3, HTTPS redirect, gzip, SPA error handling (403/404→index.html)</div></li>
+    <li><span class="icon">🔒</span><div><span class="resource">TLS</span> — Optional ACM certificate, TLSv1.2_2021 minimum</div></li>
+    <li><span class="icon">🌍</span><div><span class="resource">Route53</span> — Optional A-record alias to CloudFront (if custom domain configured)</div></li>
+    <li><span class="icon">📜</span><div><span class="resource">Bucket Policy</span> — CloudFront service principal read-only via SourceArn condition</div></li>
+  </ul>
+</div>
+
+<!-- CI/CD -->
+<div class="card cicd">
+  <div class="card-title">🔄 CI/CD <span class="badge badge-blue">GitHub Actions + OIDC</span></div>
+  <ul>
+    <li><span class="icon">🔑</span><div><span class="resource">OIDC Provider</span> — GitHub Actions → AWS via <code>sts:AssumeRoleWithWebIdentity</code></div></li>
+    <li><span class="icon">👷</span><div><span class="resource">Backend OIDC Role</span> — ECR push + ECS deploy + iam:PassRole</div></li>
+    <li><span class="icon">🎨</span><div><span class="resource">Frontend OIDC Role</span> — S3 sync + CloudFront invalidation</div></li>
+    <li><span class="icon">⚙️</span><div><span class="resource">Terraform CI Workflow</span> — Matrix [us-dev, us-dev-static], plan on PR, apply on push to main</div></li>
+    <li><span class="icon">📦</span><div><span class="resource">CICD Module</span> — CodePipeline (GitHub→CodeBuild→ECS deploy), artifact S3 bucket <span class="tag">Available</span></div></li>
+  </ul>
+</div>
+
+<!-- STATE MANAGEMENT -->
+<div class="card net">
+  <div class="card-title">🔐 Terraform State <span class="badge badge-blue">Backend Config</span></div>
+  <ul>
+    <li><span class="icon">🪣</span><div><span class="resource">S3 Bucket</span> — <code>xbrain-terraform-state</code>, encrypted</div></li>
+    <li><span class="icon">🔒</span><div><span class="resource">DynamoDB</span> — <code>terraform-state-lock</code> for state locking</div></li>
+    <li><span class="icon">📂</span><div><span class="resource">State Keys</span> — <code>us-dev/terraform.tfstate</code> + <code>us-dev-static/terraform.tfstate</code></div></li>
+  </ul>
+</div>
+
+</div><!-- /grid -->
+
+<!-- DATA FLOW -->
+<div class="flow-section">
+  <h2>📡 Data Flow: User → AI Chat</h2>
+  <div class="flow">
+    <div class="flow-item">👤 User (Browser)</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-item">☁️ CloudFront</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-item">🪣 S3 (Frontend)</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-item">📡 API Gateway <code>/chat</code></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-item">⚡ Chat Lambda</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-item">🤖 Bedrock Agent</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-item">📚 Knowledge Base (OpenSearch)</div>
+  </div>
+  <div class="flow" style="margin-top:12px">
+    <div class="flow-item">🤖 Bedrock Agent</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-item">⚡ Action Group Lambda (VPC)</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-item">💾 RDS MySQL</div>
+  </div>
+
+  <h2 style="margin-top:24px">📡 Data Flow: User → Backend API</h2>
+  <div class="flow">
+    <div class="flow-item">👤 User (Browser)</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-item">⚖️ ALB (port 80)</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-item">🚀 ECS Service (port 8080)</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-item">📦 ASP.NET Core Container</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-item">💾 RDS MySQL</div>
+  </div>
+
+  <h2 style="margin-top:24px">🔄 CI/CD Flow</h2>
+  <div class="flow">
+    <div class="flow-item">💻 git push main</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-item">🔑 GitHub Actions OIDC</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-item">⚙️ Terraform Plan + Apply</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-item">☁️ AWS Resources Deployed</div>
+  </div>
+</div>
+
+<!-- MODULE DEPENDENCY -->
+<div class="flow-section" style="margin-top:24px">
+  <h2>🔗 Module Dependency Map</h2>
+  <table>
+    <tr><th>Module</th><th>Depends On</th><th>Key Outputs</th></tr>
+    <tr><td>Networking</td><td>—</td><td>vpc_id, public/private subnet IDs</td></tr>
+    <tr><td>Security</td><td>Networking (vpc_id)</td><td>ALB/Backend/RDS/Lambda SG IDs</td></tr>
+    <tr><td>ALB</td><td>Networking, Security</td><td>alb_dns_name, target_group_arn</td></tr>
+    <tr><td>ECR</td><td>—</td><td>repository_url, repository_name</td></tr>
+    <tr><td>Database_MySQL</td><td>Networking, Security</td><td>db_endpoint, db_port</td></tr>
+    <tr><td>ECS_Backend</td><td>Networking, Security, ALB, ECR, Database</td><td>cluster_name, service_name, role ARNs</td></tr>
+    <tr><td>GeekBrain_AI_Engine</td><td>—</td><td>knowledge_base_id</td></tr>
+    <tr><td>GeekBrain_Backend</td><td>AI_Engine, Networking, Security, Database</td><td>api_gateway_url, lambda_function_name</td></tr>
+    <tr><td>GitHubActionsOIDC</td><td>ECR, ECS_Backend</td><td>iam_role_arn</td></tr>
+    <tr><td>GitHubActionsOIDCFrontend</td><td>S3, CloudFront</td><td>iam_role_arn</td></tr>
+  </table>
+</div>
+
+<p style="text-align:center;color:#475569;margin-top:30px;font-size:.8rem">Generated from Terraform source analysis — XBrain G9 Infrastructure — 12 modules, 2 workspaces, ~50 AWS resources</p>
+
+</body>
+</html>

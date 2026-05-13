@@ -63,6 +63,15 @@ resource "aws_security_group" "rds" {
     description     = "MySQL from backend SG"
   }
 
+  ingress {
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [aws_security_group.lambda.id]
+    description     = "MySQL from Lambda Action Group"
+  }
+
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -71,3 +80,26 @@ resource "aws_security_group" "rds" {
     description = "Allow all outbound"
   }
 }
+
+# ═══════════════════════════════════════
+# GeekBrain Lambda SG (Action Group + Seed Lambda)
+# ═══════════════════════════════════════
+
+resource "aws_security_group" "lambda" {
+  name        = "${var.project_name}-lambda-sg-${var.environment}"
+  description = "Security group for GeekBrain Lambda functions (Action Group)"
+  vpc_id      = var.vpc_id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound"
+  }
+
+  tags = {
+    Name = "${var.project_name}-lambda-sg-${var.environment}"
+  }
+}
+

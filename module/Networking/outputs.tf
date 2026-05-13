@@ -13,3 +13,4 @@ output "private_app_subnet_ids" {
 output "private_data_subnet_ids" {
   value = aws_subnet.private_data[*].id
 }
+

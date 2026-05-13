@@ -29,3 +29,4 @@ variable "private_data_subnet_cidrs" {
 variable "availability_zones" {
   type = list(string)
 }
+
