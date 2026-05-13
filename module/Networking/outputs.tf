@@ -14,8 +14,3 @@ output "private_data_subnet_ids" {
   value = aws_subnet.private_data[*].id
 }
 
-output "vpc_endpoint_id" {
-  description = "VPC Interface Endpoint ID for API Gateway"
-  value       = aws_vpc_endpoint.apigw.id
-}
-

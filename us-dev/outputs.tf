@@ -87,10 +87,6 @@ output "geekbrain_knowledge_base_id" {
   value       = var.enable_geekbrain ? module.geekbrain_ai_engine[0].knowledge_base_id : null
 }
 
-output "geekbrain_monitoring_api_url" {
-  description = "Private API Gateway URL for Monitoring Service"
-  value       = var.enable_geekbrain ? module.geekbrain_monitoring[0].api_url : null
-}
 
 output "geekbrain_chat_api_url" {
   description = "API Gateway endpoint for chat (POST /chat)"

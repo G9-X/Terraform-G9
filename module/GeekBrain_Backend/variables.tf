@@ -11,10 +11,6 @@ variable "retrieval_k" {
   default = 10
 }
 
-variable "monitoring_api_url" {
-  description = "Monitoring API Gateway URL for action group tool calls"
-  type        = string
-}
 
 variable "private_subnet_ids" {
   description = "Private app subnet IDs for Action Group Lambda VPC config"

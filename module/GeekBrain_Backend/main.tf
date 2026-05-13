@@ -141,7 +141,6 @@ resource "aws_lambda_function" "action_group" {
 
   environment {
     variables = {
-      MONITORING_API_URL = var.monitoring_api_url
       DB_HOST            = var.db_host
       DB_NAME            = var.db_name
       DB_USER            = var.db_user

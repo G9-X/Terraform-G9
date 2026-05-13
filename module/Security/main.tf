@@ -63,6 +63,15 @@ resource "aws_security_group" "rds" {
     description     = "MySQL from backend SG"
   }
 
+  ingress {
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [aws_security_group.lambda.id]
+    description     = "MySQL from Lambda Action Group"
+  }
+
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -91,36 +100,6 @@ resource "aws_security_group" "lambda" {
 
   tags = {
     Name = "${var.project_name}-lambda-sg-${var.environment}"
-  }
-}
-
-# ═══════════════════════════════════════
-# VPC Endpoint SG (HTTPS from Lambda)
-# ═══════════════════════════════════════
-
-resource "aws_security_group" "endpoint" {
-  name        = "${var.project_name}-endpoint-sg-${var.environment}"
-  description = "Security group for VPC Interface Endpoints"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    security_groups = [aws_security_group.lambda.id]
-    description     = "Allow HTTPS from Lambda SG"
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow all outbound"
-  }
-
-  tags = {
-    Name = "${var.project_name}-endpoint-sg-${var.environment}"
   }
 }
 

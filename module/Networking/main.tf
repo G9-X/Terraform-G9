@@ -135,20 +135,3 @@ resource "aws_route_table_association" "private_data" {
   route_table_id = aws_route_table.private_data.id
 }
 
-# ═══════════════════════════════════════
-# VPC Interface Endpoint for API Gateway
-# Allows Lambda in private subnets to reach Private API Gateway (Monitoring API)
-# ═══════════════════════════════════════
-
-resource "aws_vpc_endpoint" "apigw" {
-  vpc_id              = aws_vpc.main.id
-  service_name        = "com.amazonaws.${var.aws_region}.execute-api"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = aws_subnet.private_app[*].id
-  security_group_ids  = [var.endpoint_security_group_id]
-  private_dns_enabled = true
-
-  tags = {
-    Name = "${var.project_name}-apigw-endpoint-${var.environment}"
-  }
-}

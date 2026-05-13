@@ -135,18 +135,6 @@ module "geekbrain_ai_engine" {
   }
 }
 
-module "geekbrain_monitoring" {
-  count  = var.enable_geekbrain ? 1 : 0
-  source = "../module/GeekBrain_Monitoring"
-
-  project         = var.project_name
-  vpc_endpoint_id = module.networking.vpc_endpoint_id
-
-  tags = {
-    Environment = var.environment
-    Component   = "Monitoring"
-  }
-}
 
 module "geekbrain_backend" {
   count  = var.enable_geekbrain ? 1 : 0
@@ -157,7 +145,10 @@ module "geekbrain_backend" {
   account_id         = data.aws_caller_identity.current.account_id
   llm_model_id       = var.geekbrain_llm_model_id
   knowledge_base_id  = module.geekbrain_ai_engine[0].knowledge_base_id
-  monitoring_api_url = module.geekbrain_monitoring[0].api_url
+  db_host            = var.enable_rds ? module.database_mysql[0].db_endpoint : "127.0.0.1"
+  db_name            = var.db_name
+  db_user            = var.db_username
+  db_password        = var.db_password
   retrieval_k        = var.geekbrain_retrieval_k
 
   private_subnet_ids = module.networking.private_app_subnet_ids
