@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MH4 — Hands-on: API Gateway trước Chat Lambda</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f172a;--surface:#1e293b;--accent:#38bdf8;--accent2:#818cf8;--text:#e2e8f0;--muted:#94a3b8;--success:#34d399;--danger:#f87171;--border:#334155}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+.slide{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:4rem 8%;position:relative}
+.slide::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 30% 20%,rgba(56,189,248,0.05) 0%,transparent 60%);pointer-events:none}
+.slide-number{position:absolute;top:2rem;right:3rem;font-size:.75rem;color:var(--muted);letter-spacing:.15em;text-transform:uppercase}
+h1{font-size:clamp(2rem,5vw,3.5rem);font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:1rem}
+h2{font-size:clamp(1.5rem,3vw,2.2rem);font-weight:700;color:var(--text);margin-bottom:1.5rem}
+h3{font-size:1.1rem;font-weight:600;color:var(--accent);margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.05em}
+p,.desc{color:var(--muted);font-size:1.05rem;line-height:1.7;max-width:65ch;margin-bottom:1.5rem}
+.badge{display:inline-block;background:var(--surface);border:1px solid var(--border);border-radius:9999px;padding:.25rem .75rem;font-size:.8rem;color:var(--accent);margin-right:.5rem;margin-bottom:.5rem}
+.steps{display:grid;gap:1.5rem;margin:2rem 0}
+.step{background:var(--surface);border:1px solid var(--border);border-radius:1rem;padding:1.5rem 2rem;position:relative;transition:border-color .2s}
+.step:hover{border-color:var(--accent)}
+.step-num{position:absolute;top:-0.75rem;left:1.5rem;background:var(--accent);color:var(--bg);font-weight:700;font-size:.8rem;width:1.5rem;height:1.5rem;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.step h4{font-size:1rem;font-weight:600;margin-bottom:.4rem}
+.step p{font-size:.9rem;margin-bottom:0;color:var(--muted)}
+.step .path{font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--accent2);margin-top:.4rem;opacity:.8}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin:2rem 0}
+@media(max-width:768px){.grid-2{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:1rem;padding:2rem;transition:transform .2s,border-color .2s}
+.card:hover{transform:translateY(-2px);border-color:var(--accent)}
+.code-block{background:#0d1117;border:1px solid var(--border);border-radius:.75rem;padding:1.25rem;font-family:'JetBrains Mono',monospace;font-size:.8rem;line-height:1.8;overflow-x:auto;margin:1rem 0;color:#c9d1d9}
+.code-block .comment{color:#8b949e}
+.code-block .keyword{color:#ff7b72}
+.code-block .string{color:#a5d6ff}
+.code-block .success{color:#34d399}
+.code-block .danger{color:#f87171}
+.divider{width:100%;height:1px;background:var(--border);margin:3rem 0}
+.tag{display:inline-flex;align-items:center;gap:.3rem;font-size:.75rem;padding:.2rem .6rem;border-radius:.3rem;font-weight:500}
+.tag-green{background:rgba(52,211,153,0.1);color:var(--success)}
+.tag-red{background:rgba(248,113,113,0.1);color:var(--danger)}
+.tag-blue{background:rgba(56,189,248,0.1);color:var(--accent)}
+.arch-diagram{background:var(--surface);border:1px solid var(--border);border-radius:1rem;padding:2rem;font-family:'JetBrains Mono',monospace;font-size:.85rem;line-height:2;text-align:center;margin:2rem 0}
+.arch-diagram .arrow{color:var(--accent)}
+.arch-diagram .component{color:var(--text);font-weight:600}
+.arch-diagram .new{color:var(--success);font-weight:700}
+nav{position:fixed;bottom:2rem;right:2rem;display:flex;gap:.5rem;z-index:100}
+nav a{background:var(--surface);border:1px solid var(--border);color:var(--text);width:2.5rem;height:2.5rem;border-radius:50%;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.2rem;transition:background .2s}
+nav a:hover{background:var(--accent);color:var(--bg)}
+.highlight-box{border-left:3px solid var(--accent);padding-left:1.5rem;margin:1.5rem 0}
+.screenshot-placeholder{background:var(--surface);border:2px dashed var(--border);border-radius:1rem;padding:3rem 2rem;text-align:center;color:var(--muted);font-size:.9rem;margin:1rem 0}
+</style>
+</head>
+<body>
+
+<nav>
+<a href="#slide1">1</a>
+<a href="#slide2">2</a>
+<a href="#slide3">3</a>
+<a href="#slide4">4</a>
+<a href="#slide5">5</a>
+<a href="#slide6">6</a>
+<a href="#slide7">7</a>
+</nav>
+
+<!-- Slide 1: Title -->
+<section class="slide" id="slide1">
+<span class="slide-number">01 / 07</span>
+<div>
+<div style="margin-bottom:1rem">
+<span class="badge">W5</span>
+<span class="badge">MH4</span>
+<span class="badge">Hands-on Guide</span>
+</div>
+<h1>API Gateway trước Chat Lambda</h1>
+<p>Hướng dẫn từng bước trên AWS Console: tạo Usage Plan, API Key, bật throttling và authentication cho GeekBrain Chat API.</p>
+<div style="margin-top:2rem">
+<span class="tag tag-blue">REST API</span>
+<span class="tag tag-green">Throttling</span>
+<span class="tag tag-red">API Key Auth</span>
+</div>
+</div>
+</section>
+
+<!-- Slide 2: Current State -->
+<section class="slide" id="slide2">
+<span class="slide-number">02 / 07</span>
+<h2>Hiện trạng — Đã có gì?</h2>
+<p>Terraform module <code>GeekBrain_Backend</code> đã deploy sẵn REST API + Lambda Proxy. Chỉ cần thêm throttling + auth.</p>
+
+<div class="arch-diagram">
+<span class="component">Client</span>
+<span class="arrow"> → </span>
+<span class="component">API Gateway</span>
+<span class="arrow"> → </span>
+<span class="component">POST /chat</span>
+<span class="arrow"> → </span>
+<span class="component">Lambda (chat)</span>
+<span class="arrow"> → </span>
+<span class="component">Bedrock Agent</span>
+<br><br>
+<span style="color:var(--muted)">✓ REST API Regional &nbsp;|&nbsp; ✓ Lambda Proxy Integration &nbsp;|&nbsp; ✓ CORS (OPTIONS) &nbsp;|&nbsp; ✓ Stage: prod</span>
+<br>
+<span style="color:var(--danger)">✗ Không throttling &nbsp;|&nbsp; ✗ Không authentication &nbsp;|&nbsp; ✗ Ai cũng gọi được</span>
+</div>
+
+<div class="highlight-box">
+<h3>W5 yêu cầu bổ sung</h3>
+<p style="margin-bottom:0">① Throttling: Usage Plan với rate limit + burst limit<br>
+② Authentication: API Key required trên POST /chat<br>
+③ Test: curl 200 (có key) + curl 403 (không key)</p>
+</div>
+</section>
+
+<!-- Slide 3: Step 1-2 -->
+<section class="slide" id="slide3">
+<span class="slide-number">03 / 07</span>
+<h2>Bước 1–2: Tạo Usage Plan & API Key</h2>
+
+<div class="steps">
+<div class="step">
+<span class="step-num">1</span>
+<h4>Tạo Usage Plan</h4>
+<p>Giới hạn số request/giây và burst để bảo vệ Lambda khỏi bị overload.</p>
+<div class="path">Console → API Gateway → Usage Plans → Create</div>
+</div>
+
+<div class="step">
+<span class="step-num">2</span>
+<h4>Cấu hình Throttling</h4>
+<p><strong>Rate:</strong> 10 requests/second &nbsp;|&nbsp; <strong>Burst:</strong> 20 requests<br>
+<strong>Quota:</strong> 1000 requests/day (tuỳ chọn cho demo)</p>
+<div class="path">Usage Plan → Throttling section → Set rate & burst</div>
+</div>
+</div>
+
+<div class="screenshot-placeholder">
+📸 Screenshot: Usage Plan creation form với Rate = 10, Burst = 20
+</div>
+
+<div class="steps">
+<div class="step">
+<span class="step-num">3</span>
+<h4>Associate API Stage</h4>
+<p>Gắn Usage Plan vào stage <code>prod</code> của <code>xbrain-chat-api</code>.</p>
+<div class="path">Usage Plan → Associated Stages → Add Stage → xbrain-chat-api / prod</div>
+</div>
+
+<div class="step">
+<span class="step-num">4</span>
+<h4>Tạo API Key</h4>
+<p>Tạo key mới, copy value, gắn vào Usage Plan.</p>
+<div class="path">Console → API Gateway → API Keys → Create API Key → Add to Usage Plan</div>
+</div>
+</div>
+</section>
+
+<!-- Slide 4: Step 3-4 -->
+<section class="slide" id="slide4">
+<span class="slide-number">04 / 07</span>
+<h2>Bước 3–4: Bật API Key Required & Re-deploy</h2>
+
+<div class="steps">
+<div class="step">
+<span class="step-num">5</span>
+<h4>Bật API Key Required trên POST /chat</h4>
+<p>Vào method POST → Method Request → API Key Required = <strong>true</strong>.</p>
+<div class="path">API Gateway → xbrain-chat-api → /chat → POST → Method Request → API Key Required ✓</div>
+</div>
+
+<div class="step">
+<span class="step-num">6</span>
+<h4>Re-deploy API</h4>
+<p>Deploy lại API sang stage <code>prod</code> để thay đổi có hiệu lực.</p>
+<div class="path">API Gateway → xbrain-chat-api → Actions → Deploy API → Stage: prod</div>
+</div>
+</div>
+
+<div class="screenshot-placeholder">
+📸 Screenshot: Method Request với API Key Required = true
+</div>
+
+<div class="highlight-box">
+<h3>Lưu ý quan trọng</h3>
+<p style="margin-bottom:0">Sau khi đổi API Key Required, <strong>phải deploy lại</strong> mới có hiệu lực. Nếu quên deploy → test curl vẫn trả 200 dù không có key.</p>
+</div>
+</section>
+
+<!-- Slide 5: Testing -->
+<section class="slide" id="slide5">
+<span class="slide-number">05 / 07</span>
+<h2>Bước 5: Test curl — 200 và 403</h2>
+
+<div class="grid-2">
+<div class="card">
+<h3>Test 1: Authenticated (200)</h3>
+<div class="code-block">
+<span class="comment"># Có API Key → 200 OK</span><br>
+curl -X POST \<br>
+&nbsp;&nbsp;<span class="string">"https://{api-id}.execute-api.us-west-2.amazonaws.com/prod/chat"</span> \<br>
+&nbsp;&nbsp;-H <span class="string">"Content-Type: application/json"</span> \<br>
+&nbsp;&nbsp;-H <span class="string">"x-api-key: YOUR_API_KEY_HERE"</span> \<br>
+&nbsp;&nbsp;-d <span class="string">'{"question":"What is GeekBrain?"}'</span><br>
+<br>
+<span class="comment"># Response:</span><br>
+<span class="success">{"statusCode": 200, "body": {"answer": "..."}}</span>
+</div>
+</div>
+
+<div class="card">
+<h3>Test 2: Unauthenticated (403)</h3>
+<div class="code-block">
+<span class="comment"># Không có API Key → 403 Forbidden</span><br>
+curl -X POST \<br>
+&nbsp;&nbsp;<span class="string">"https://{api-id}.execute-api.us-west-2.amazonaws.com/prod/chat"</span> \<br>
+&nbsp;&nbsp;-H <span class="string">"Content-Type: application/json"</span> \<br>
+&nbsp;&nbsp;-d <span class="string">'{"question":"What is GeekBrain?"}'</span><br>
+<br>
+<span class="comment"># Response:</span><br>
+<span class="danger">{"message": "Forbidden"}</span>
+</div>
+</div>
+</div>
+
+<div class="screenshot-placeholder">
+📸 Screenshot: Terminal output showing cả 2 test results
+</div>
+</section>
+
+<!-- Slide 6: Architecture After -->
+<section class="slide" id="slide6">
+<span class="slide-number">06 / 07</span>
+<h2>Kiến trúc sau khi hoàn thành MH4</h2>
+
+<div class="arch-diagram">
+<span class="component">Client</span>
+<span class="arrow"> → </span>
+<span class="new">[API Key Header]</span>
+<span class="arrow"> → </span>
+<span class="component">API Gateway</span>
+<span class="arrow"> → </span>
+<span class="new">[Usage Plan: 10 req/s, burst 20]</span>
+<br>
+<span class="arrow">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓</span>
+<br>
+<span class="component">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;POST /chat</span>
+<span class="arrow"> → </span>
+<span class="component">Lambda Proxy</span>
+<span class="arrow"> → </span>
+<span class="component">Bedrock Agent</span>
+<br><br>
+<span class="new">✓ Throttling (10/s + burst 20)</span> &nbsp;|&nbsp;
+<span class="new">✓ API Key Authentication</span> &nbsp;|&nbsp;
+<span style="color:var(--text)">✓ CORS</span> &nbsp;|&nbsp;
+<span style="color:var(--text)">✓ Lambda Proxy</span>
+</div>
+
+<div class="grid-2">
+<div class="card">
+<h3>Bảo vệ</h3>
+<p>Không API Key → 403 ngay tại API Gateway, Lambda không bị invoke. Tiết kiệm cost + bảo vệ Bedrock Agent.</p>
+</div>
+<div class="card">
+<h3>Throttling</h3>
+<p>Quá 10 req/s → 429 Too Many Requests. Burst cho phép spike tới 20 rồi steady ở 10. Ngăn DDoS amateur.</p>
+</div>
+</div>
+</section>
+
+<!-- Slide 7: Summary -->
+<section class="slide" id="slide7">
+<span class="slide-number">07 / 07</span>
+<h2>Checklist hoàn thành MH4</h2>
+
+<div class="steps">
+<div class="step">
+<span class="step-num">✓</span>
+<h4>REST API đã tạo</h4>
+<p>API Gateway REST API (Regional) — <code>xbrain-chat-api</code></p>
+</div>
+<div class="step">
+<span class="step-num">✓</span>
+<h4>Lambda Proxy Integration</h4>
+<p>POST /chat → <code>xbrain-geekbrain-chat</code> Lambda function</p>
+</div>
+<div class="step">
+<span class="step-num">✓</span>
+<h4>Throttling cấu hình</h4>
+<p>Usage Plan: 10 req/s rate, 20 burst, 1000/day quota</p>
+</div>
+<div class="step">
+<span class="step-num">✓</span>
+<h4>Authentication hoạt động</h4>
+<p>API Key required trên POST method — 403 khi thiếu key</p>
+</div>
+<div class="step">
+<span class="step-num">✓</span>
+<h4>Evidence: curl 200 + 403</h4>
+<p>Screenshot terminal cho cả 2 case trong Evidence Pack</p>
+</div>
+</div>
+
+<div style="margin-top:3rem;padding:2rem;background:var(--surface);border-radius:1rem;border:1px solid var(--border)">
+<h3 style="margin-bottom:1rem">Thời gian ước tính</h3>
+<p style="margin-bottom:0">Hands-on trên Console: <strong>~10 phút</strong> (Usage Plan + API Key + redeploy + test)</p>
+</div>
+</section>
+
+</body>
+</html>

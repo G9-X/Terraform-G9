@@ -411,10 +411,11 @@ resource "aws_api_gateway_resource" "chat" {
 }
 
 resource "aws_api_gateway_method" "chat_post" {
-  rest_api_id   = aws_api_gateway_rest_api.main.id
-  resource_id   = aws_api_gateway_resource.chat.id
-  http_method   = "POST"
-  authorization = "NONE"
+  rest_api_id      = aws_api_gateway_rest_api.main.id
+  resource_id      = aws_api_gateway_resource.chat.id
+  http_method      = "POST"
+  authorization    = "NONE"
+  api_key_required = true
 }
 
 resource "aws_api_gateway_integration" "chat_post" {
@@ -497,4 +498,41 @@ resource "aws_api_gateway_stage" "prod" {
   rest_api_id   = aws_api_gateway_rest_api.main.id
   stage_name    = "prod"
   tags          = var.tags
+}
+
+# ═══════════════════════════════════════
+# API Gateway — Usage Plan + API Key (W5 MH4: Throttling + Auth)
+# ═══════════════════════════════════════
+
+resource "aws_api_gateway_usage_plan" "chat" {
+  name = "${var.project}-chat-usage-plan"
+
+  api_stages {
+    api_id = aws_api_gateway_rest_api.main.id
+    stage  = aws_api_gateway_stage.prod.stage_name
+  }
+
+  throttle_settings {
+    rate_limit  = var.api_throttle_rate_limit
+    burst_limit = var.api_throttle_burst_limit
+  }
+
+  quota_settings {
+    limit  = var.api_quota_limit
+    period = "DAY"
+  }
+
+  tags = var.tags
+}
+
+resource "aws_api_gateway_api_key" "chat" {
+  name    = "${var.project}-chat-api-key"
+  enabled = true
+  tags    = var.tags
+}
+
+resource "aws_api_gateway_usage_plan_key" "chat" {
+  key_id        = aws_api_gateway_api_key.chat.id
+  key_type      = "API_KEY"
+  usage_plan_id = aws_api_gateway_usage_plan.chat.id
 }

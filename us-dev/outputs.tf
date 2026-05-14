@@ -97,3 +97,13 @@ output "geekbrain_chat_lambda" {
   description = "Main Chat Lambda function name"
   value       = var.enable_geekbrain ? module.geekbrain_backend[0].lambda_function_name : null
 }
+
+output "geekbrain_api_key_id" {
+  description = "API Key ID for chat endpoint"
+  value       = var.enable_geekbrain ? module.geekbrain_backend[0].api_key_id : null
+}
+
+output "geekbrain_usage_plan_id" {
+  description = "Usage Plan ID for chat API"
+  value       = var.enable_geekbrain ? module.geekbrain_backend[0].usage_plan_id : null
+}

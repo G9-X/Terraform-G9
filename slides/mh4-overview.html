@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MH4 — Task Overview: API Gateway + Throttling + Auth</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0f;--surface:#141420;--surface2:#1c1c2e;--accent:#6366f1;--accent2:#a78bfa;--cyan:#22d3ee;--text:#f1f5f9;--muted:#94a3b8;--success:#10b981;--warning:#f59e0b;--danger:#ef4444;--border:#2d2d44}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+.slide{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:5rem 8%;position:relative}
+.slide::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 70% 30%,rgba(99,102,241,0.04),transparent 50%);pointer-events:none}
+.slide-id{position:absolute;top:2rem;left:3rem;font-size:.7rem;color:var(--muted);letter-spacing:.2em;text-transform:uppercase;font-weight:500}
+h1{font-size:clamp(2.5rem,6vw,4rem);font-weight:900;line-height:1.1;margin-bottom:1.5rem}
+h1 .gradient{background:linear-gradient(135deg,var(--accent),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+h2{font-size:clamp(1.6rem,3vw,2.4rem);font-weight:700;margin-bottom:1.5rem;color:var(--text)}
+h3{font-size:1rem;font-weight:600;color:var(--accent2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.75rem}
+p{color:var(--muted);font-size:1rem;line-height:1.8;max-width:60ch}
+.subtitle{font-size:1.15rem;color:var(--muted);max-width:55ch;margin-bottom:2rem}
+.pill{display:inline-block;padding:.3rem .8rem;border-radius:9999px;font-size:.75rem;font-weight:600;margin-right:.4rem;margin-bottom:.4rem}
+.pill-purple{background:rgba(99,102,241,0.15);color:var(--accent2);border:1px solid rgba(99,102,241,0.3)}
+.pill-cyan{background:rgba(34,211,238,0.1);color:var(--cyan);border:1px solid rgba(34,211,238,0.3)}
+.pill-green{background:rgba(16,185,129,0.1);color:var(--success);border:1px solid rgba(16,185,129,0.3)}
+.pill-red{background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.3)}
+
+.timeline{position:relative;margin:3rem 0;padding-left:2rem}
+.timeline::before{content:'';position:absolute;left:.5rem;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--accent),var(--cyan),var(--success))}
+.timeline-item{position:relative;margin-bottom:2rem;padding-left:2rem}
+.timeline-item::before{content:'';position:absolute;left:-1.75rem;top:.5rem;width:.75rem;height:.75rem;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
+.timeline-item:nth-child(2)::before{background:var(--cyan)}
+.timeline-item:nth-child(3)::before{background:var(--accent2)}
+.timeline-item:nth-child(4)::before{background:var(--success)}
+.timeline-item h4{font-size:1rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.timeline-item p{font-size:.9rem;margin-bottom:0}
+
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin:2rem 0}
+@media(max-width:900px){.grid-3{grid-template-columns:1fr}}
+.metric-card{background:var(--surface);border:1px solid var(--border);border-radius:1rem;padding:2rem;text-align:center;transition:border-color .3s,transform .3s}
+.metric-card:hover{border-color:var(--accent);transform:translateY(-3px)}
+.metric-card .value{font-size:2.5rem;font-weight:800;margin-bottom:.5rem}
+.metric-card .label{font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+
+.flow-diagram{background:var(--surface);border:1px solid var(--border);border-radius:1.25rem;padding:2.5rem;margin:2rem 0;font-family:'JetBrains Mono',monospace;font-size:.85rem;line-height:2.2;overflow-x:auto}
+.flow-diagram .layer{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:.5rem}
+.flow-box{display:inline-flex;align-items:center;padding:.4rem 1rem;border-radius:.5rem;font-weight:600;font-size:.8rem}
+.flow-box-blue{background:rgba(99,102,241,0.15);color:var(--accent2);border:1px solid rgba(99,102,241,0.3)}
+.flow-box-cyan{background:rgba(34,211,238,0.1);color:var(--cyan);border:1px solid rgba(34,211,238,0.3)}
+.flow-box-green{background:rgba(16,185,129,0.1);color:var(--success);border:1px solid rgba(16,185,129,0.3)}
+.flow-box-orange{background:rgba(245,158,11,0.1);color:var(--warning);border:1px solid rgba(245,158,11,0.3)}
+.flow-arrow{color:var(--muted);font-size:1.2rem;margin:0 .3rem}
+
+.comparison{display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin:2rem 0}
+@media(max-width:768px){.comparison{grid-template-columns:1fr}}
+.comparison-card{background:var(--surface);border-radius:1rem;padding:2rem;border:1px solid var(--border)}
+.comparison-card.before{border-top:3px solid var(--danger)}
+.comparison-card.after{border-top:3px solid var(--success)}
+.comparison-card h4{font-size:1rem;margin-bottom:1rem}
+.comparison-card ul{list-style:none;padding:0}
+.comparison-card li{padding:.4rem 0;font-size:.9rem;color:var(--muted);display:flex;align-items:center;gap:.5rem}
+.comparison-card li::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.comparison-card.before li::before{background:var(--danger)}
+.comparison-card.after li::before{background:var(--success)}
+
+.task-table{width:100%;border-collapse:collapse;margin:2rem 0;font-size:.9rem}
+.task-table th{text-align:left;padding:.75rem 1rem;color:var(--muted);font-weight:500;font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--border)}
+.task-table td{padding:.75rem 1rem;border-bottom:1px solid var(--border);color:var(--text)}
+.task-table tr:hover td{background:var(--surface)}
+.status{display:inline-flex;align-items:center;gap:.3rem;font-size:.8rem;font-weight:500}
+.status-done{color:var(--success)}
+.status-todo{color:var(--warning)}
+
+nav{position:fixed;bottom:2rem;right:2rem;display:flex;gap:.4rem;z-index:100}
+nav a{background:var(--surface2);border:1px solid var(--border);color:var(--muted);width:2.2rem;height:2.2rem;border-radius:50%;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:.8rem;font-weight:600;transition:all .2s}
+nav a:hover{background:var(--accent);color:white;border-color:var(--accent)}
+.footer{text-align:center;padding:2rem;font-size:.75rem;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<nav>
+<a href="#s1">1</a>
+<a href="#s2">2</a>
+<a href="#s3">3</a>
+<a href="#s4">4</a>
+<a href="#s5">5</a>
+<a href="#s6">6</a>
+</nav>
+
+<!-- Slide 1: Title -->
+<section class="slide" id="s1">
+<span class="slide-id">G9 — Week 5</span>
+<div>
+<h1><span class="gradient">MH4: API Gateway</span><br>trước Chat Lambda</h1>
+<p class="subtitle">Expose Chat Lambda qua API Gateway REST API với throttling và API Key authentication — biến raw Lambda thành production-grade API surface.</p>
+<div>
+<span class="pill pill-purple">REST API</span>
+<span class="pill pill-cyan">Lambda Proxy</span>
+<span class="pill pill-green">Throttling</span>
+<span class="pill pill-red">API Key Auth</span>
+</div>
+</div>
+</section>
+
+<!-- Slide 2: Problem & Solution -->
+<section class="slide" id="s2">
+<span class="slide-id">Problem → Solution</span>
+<h2>Vấn đề: Lambda endpoint không được bảo vệ</h2>
+
+<div class="comparison">
+<div class="comparison-card before">
+<h4 style="color:var(--danger)">Trước (hiện tại)</h4>
+<ul>
+<li>API Gateway không yêu cầu auth</li>
+<li>Không giới hạn request rate</li>
+<li>Ai biết URL đều gọi được</li>
+<li>Dễ bị abuse → Lambda cost tăng vọt</li>
+<li>Bedrock Agent bị overload</li>
+</ul>
+</div>
+<div class="comparison-card after">
+<h4 style="color:var(--success)">Sau (MH4 hoàn thành)</h4>
+<ul>
+<li>API Key bắt buộc → 403 nếu thiếu</li>
+<li>Throttling: 10 req/s, burst 20</li>
+<li>Usage Plan quota: 1000 req/day</li>
+<li>Lambda chỉ invoke khi auth pass</li>
+<li>Cost predictable, DDoS-resistant</li>
+</ul>
+</div>
+</div>
+</section>
+
+<!-- Slide 3: Architecture -->
+<section class="slide" id="s3">
+<span class="slide-id">Architecture</span>
+<h2>Kiến trúc request flow</h2>
+
+<div class="flow-diagram">
+<div class="layer" style="margin-bottom:1.5rem">
+<span class="flow-box flow-box-blue">Frontend / curl</span>
+<span class="flow-arrow">→</span>
+<span class="flow-box flow-box-orange">x-api-key header</span>
+<span class="flow-arrow">→</span>
+<span class="flow-box flow-box-cyan">API Gateway</span>
+</div>
+<div class="layer" style="margin-bottom:1.5rem">
+<span style="color:var(--muted);font-size:.8rem">│ API Key validation + Usage Plan throttle check │</span>
+</div>
+<div class="layer" style="margin-bottom:1.5rem">
+<span class="flow-arrow" style="font-size:1.5rem">↓</span>
+<span style="color:var(--success);font-size:.8rem;margin-left:.5rem">PASS → invoke</span>
+<span style="color:var(--muted);margin:0 1rem">|</span>
+<span style="color:var(--danger);font-size:.8rem">FAIL → 403 / 429</span>
+</div>
+<div class="layer">
+<span class="flow-box flow-box-green">POST /chat</span>
+<span class="flow-arrow">→</span>
+<span class="flow-box flow-box-green">Lambda Proxy</span>
+<span class="flow-arrow">→</span>
+<span class="flow-box flow-box-green">Bedrock Agent</span>
+<span class="flow-arrow">→</span>
+<span class="flow-box flow-box-green">Knowledge Base</span>
+</div>
+</div>
+
+<div class="grid-3">
+<div class="metric-card">
+<div class="value" style="color:var(--cyan)">10</div>
+<div class="label">Requests / second</div>
+</div>
+<div class="metric-card">
+<div class="value" style="color:var(--accent2)">20</div>
+<div class="label">Burst capacity</div>
+</div>
+<div class="metric-card">
+<div class="value" style="color:var(--success)">1000</div>
+<div class="label">Daily quota</div>
+</div>
+</div>
+</section>
+
+<!-- Slide 4: Implementation Plan -->
+<section class="slide" id="s4">
+<span class="slide-id">Implementation</span>
+<h2>Kế hoạch triển khai</h2>
+
+<div class="timeline">
+<div class="timeline-item">
+<h4>Phase 1: Deploy stack (Terraform CI)</h4>
+<p>Push code → GitHub Actions tự động deploy toàn bộ infrastructure bao gồm API Gateway + Lambda. Stage <code>prod</code> sẵn sàng.</p>
+</div>
+<div class="timeline-item">
+<h4>Phase 2: Thêm Usage Plan + API Key (Console)</h4>
+<p>Tạo Usage Plan (rate=10, burst=20, quota=1000/day), tạo API Key, associate với stage <code>prod</code>.</p>
+</div>
+<div class="timeline-item">
+<h4>Phase 3: Bật API Key Required (Console)</h4>
+<p>Method Request → API Key Required = true trên POST /chat. Redeploy API.</p>
+</div>
+<div class="timeline-item">
+<h4>Phase 4: Verify & Evidence</h4>
+<p>curl test 200 (có key) + 403 (không key). Screenshot cho Evidence Pack.</p>
+</div>
+</div>
+</section>
+
+<!-- Slide 5: Task Breakdown -->
+<section class="slide" id="s5">
+<span class="slide-id">Tasks</span>
+<h2>Chi tiết công việc</h2>
+
+<table class="task-table">
+<thead>
+<tr><th>Task</th><th>Phương thức</th><th>Thời gian</th><th>Status</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>REST API + Lambda Proxy Integration</td>
+<td>Terraform (đã có)</td>
+<td>0 min</td>
+<td><span class="status status-done">✓ Done</span></td>
+</tr>
+<tr>
+<td>/chat route POST + OPTIONS (CORS)</td>
+<td>Terraform (đã có)</td>
+<td>0 min</td>
+<td><span class="status status-done">✓ Done</span></td>
+</tr>
+<tr>
+<td>Stage prod deployed</td>
+<td>Terraform (đã có)</td>
+<td>0 min</td>
+<td><span class="status status-done">✓ Done</span></td>
+</tr>
+<tr>
+<td>Tạo Usage Plan (throttle + quota)</td>
+<td>AWS Console</td>
+<td>3 min</td>
+<td><span class="status status-todo">○ Todo</span></td>
+</tr>
+<tr>
+<td>Tạo API Key + associate</td>
+<td>AWS Console</td>
+<td>2 min</td>
+<td><span class="status status-todo">○ Todo</span></td>
+</tr>
+<tr>
+<td>Bật API Key Required trên POST</td>
+<td>AWS Console</td>
+<td>2 min</td>
+<td><span class="status status-todo">○ Todo</span></td>
+</tr>
+<tr>
+<td>Redeploy API stage prod</td>
+<td>AWS Console</td>
+<td>1 min</td>
+<td><span class="status status-todo">○ Todo</span></td>
+</tr>
+<tr>
+<td>Test curl 200 + 403</td>
+<td>Terminal</td>
+<td>2 min</td>
+<td><span class="status status-todo">○ Todo</span></td>
+</tr>
+</tbody>
+</table>
+
+<div style="margin-top:2rem;display:flex;gap:2rem">
+<div>
+<span style="font-size:2rem;font-weight:800;color:var(--success)">~10 min</span>
+<p style="font-size:.85rem">Console hands-on</p>
+</div>
+<div>
+<span style="font-size:2rem;font-weight:800;color:var(--accent2)">4/8</span>
+<p style="font-size:.85rem">Tasks đã hoàn thành (Terraform)</p>
+</div>
+</div>
+</section>
+
+<!-- Slide 6: Acceptance Criteria -->
+<section class="slide" id="s6">
+<span class="slide-id">Done Criteria</span>
+<h2>Acceptance Criteria</h2>
+
+<div class="grid-3" style="grid-template-columns:1fr 1fr;max-width:800px">
+<div class="metric-card" style="border-top:3px solid var(--success)">
+<div class="value" style="font-size:1.5rem;color:var(--success)">✓</div>
+<div class="label">REST API created<br><small style="color:var(--muted)">xbrain-chat-api Regional</small></div>
+</div>
+<div class="metric-card" style="border-top:3px solid var(--success)">
+<div class="value" style="font-size:1.5rem;color:var(--success)">✓</div>
+<div class="label">Lambda Proxy Integration<br><small style="color:var(--muted)">POST /chat → Lambda</small></div>
+</div>
+<div class="metric-card" style="border-top:3px solid var(--success)">
+<div class="value" style="font-size:1.5rem;color:var(--success)">✓</div>
+<div class="label">Throttling configured<br><small style="color:var(--muted)">10/s rate, 20 burst</small></div>
+</div>
+<div class="metric-card" style="border-top:3px solid var(--success)">
+<div class="value" style="font-size:1.5rem;color:var(--success)">✓</div>
+<div class="label">Auth: 200 + 403 verified<br><small style="color:var(--muted)">API Key required</small></div>
+</div>
+</div>
+
+<div style="margin-top:3rem;padding:2rem;background:var(--surface);border-radius:1rem;border:1px solid var(--border)">
+<h3>Evidence Pack entries</h3>
+<p style="margin-bottom:0">
+① Screenshot Usage Plan settings (rate + burst + quota)<br>
+② Screenshot Method Request với API Key Required = true<br>
+③ Terminal output: curl 200 (authenticated)<br>
+④ Terminal output: curl 403 (unauthenticated)
+</p>
+</div>
+</section>
+
+<div class="footer">
+G9 — XBrain Infrastructure — W5: The Network Fortress — MH4 Task Overview
+</div>
+
+</body>
+</html>
