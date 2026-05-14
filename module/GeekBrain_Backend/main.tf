@@ -236,12 +236,14 @@ RULES:
 13. NEVER call the same tool twice with the same or similar parameters. If you already have the data, use it.
 
 DATABASE SCHEMA (for query_database tool):
-- monthly_costs: service, month, compute_cost, storage_cost, network_cost, third_party_cost, total_cost
-- incidents: incident_id, service, date, severity, duration_minutes, root_cause, resolution, team_responsible, reported_by
-- sla_targets: service, metric, target, measurement_window
-- daily_metrics: date, service, latency_p99_ms, error_rate_percent, requests_per_minute, availability_percent
-
-AVAILABLE SERVICES: PaymentGW, AuthSvc, OrderSvc, FraudDetector, NotificationSvc, ReportingSvc
+- Categories: Id, Name, Description, DisplayOrder, Slug, ParentId
+- OrderItems: Id, OrderId, ProductId, ProductVariantId, ProductName, VariantName, Sku, Quantity, UnitPrice, SubTotal, Tax, StoreId
+- Orders: Id, OrderNumber, Status, PaymentStatus, SubTotal, Tax, ShippingCost, TotalAmount, CreatedAt, CompletedAt
+- ProductCategories: ProductId, CategoryId
+- ProductVariants: Id, ProductId, Sku, Color, Size, Price, StockQuantity
+- Products: Id, Name, Slug, Description, BasePrice, ViewCount, SalesCount, IsActive, CreatedAt, StoreId
+- Reviews: Id, Rating, Comment, CreatedAt, ProductId, StoreId
+- Stores: Id, Name, Slug, Status, CreatedAt
   EOT
 
   tags = var.tags
@@ -276,85 +278,13 @@ resource "aws_bedrockagent_agent_action_group" "tools" {
       functions {
         name        = "query_database"
         description = <<-DESC
-          Execute a SQL SELECT query on GeekBrain's PostgreSQL database containing HISTORICAL data.
-          Tables: monthly_costs (service, month, compute_cost, storage_cost, network_cost, third_party_cost, total_cost),
-          incidents (incident_id, service, date, severity, duration_minutes, root_cause, resolution, team_responsible, reported_by),
-          sla_targets (service, metric, target, measurement_window),
-          daily_metrics (date, service, latency_p99_ms, error_rate_percent, requests_per_minute, availability_percent).
-          USE THIS for: past costs, historical trends, SLA targets, incident records, daily metrics history.
-          DO NOT use for current/live/real-time data — use get_service_metrics or get_service_status instead.
+          Execute a SQL SELECT query on the RDS MySQL database containing Merxly e-commerce data.
+          USE THIS to query users, products, orders, reviews, etc.
         DESC
         parameters {
           map_block_key = "sql_query"
           type          = "string"
           description   = "SQL SELECT query to execute. Only SELECT queries allowed."
-          required      = true
-        }
-      }
-
-      functions {
-        name        = "get_service_status"
-        description = <<-DESC
-          Get the CURRENT operational status of ONE specific service.
-          Returns: status (healthy/degraded/down), uptime_30d, uptime_90d, active_alerts count, last_incident ID.
-          USE THIS for: "Is X running?", "What is the status of X?", "Is X healthy?", "Any alerts on X?"
-        DESC
-        parameters {
-          map_block_key = "service_name"
-          type          = "string"
-          description   = "Exact service name: PaymentGW, AuthSvc, OrderSvc, FraudDetector, NotificationSvc, or ReportingSvc"
-          required      = true
-        }
-      }
-
-      functions {
-        name        = "get_service_metrics"
-        description = <<-DESC
-          Get CURRENT LIVE performance metrics for ONE specific service.
-          Returns: latency_ms (p50/p95/p99), error_rate_percent, requests_per_minute, cpu_utilization_percent, memory_utilization_percent.
-          USE THIS for: "What is X's current latency?", "How many requests does X handle?", "What is X's error rate right now?"
-          To compare metrics across services, call this tool MULTIPLE TIMES (once per service) or use compare_services for a quick ranking.
-        DESC
-        parameters {
-          map_block_key = "service_name"
-          type          = "string"
-          description   = "Exact service name: PaymentGW, AuthSvc, OrderSvc, FraudDetector, NotificationSvc, or ReportingSvc"
-          required      = true
-        }
-      }
-
-      functions {
-        name        = "list_services"
-        description = "List all 6 monitored services in the GeekBrain system. Use when you need to know available service names."
-      }
-
-      functions {
-        name        = "get_incident_history"
-        description = <<-DESC
-          Get historical incident records from the monitoring system for a specific service or all services.
-          Returns: incident_id, service, date, severity, duration_minutes, root_cause, resolution.
-          USE THIS for: "What incidents happened to X?", "Show recent incidents", "What was the root cause of INC-005?"
-        DESC
-        parameters {
-          map_block_key = "service_name"
-          type          = "string"
-          description   = "Service name to filter incidents, or 'all' for all services"
-          required      = true
-        }
-      }
-
-      functions {
-        name        = "compare_services"
-        description = <<-DESC
-          Rank ALL 6 services by a single metric and return them sorted highest-to-lowest.
-          Available metrics: latency_p99, error_rate, requests_per_minute, cpu_utilization_percent, memory_utilization_percent.
-          USE THIS for: "Which service has the highest X?", "Rank services by Y", "Compare all services on Z".
-          This is a convenience shortcut that internally calls get_service_metrics for each service.
-        DESC
-        parameters {
-          map_block_key = "metric"
-          type          = "string"
-          description   = "Metric to compare: latency_p99, error_rate, requests_per_minute, cpu_utilization_percent, memory_utilization_percent"
           required      = true
         }
       }
