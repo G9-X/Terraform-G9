@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MH4 — Hands-on Console: API Gateway Throttling + API Key</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#ffffff;
+  --surface:#f8fafc;
+  --surface2:#f1f5f9;
+  --border:#e2e8f0;
+  --border2:#cbd5e1;
+  --text:#0f172a;
+  --text2:#334155;
+  --muted:#64748b;
+  --accent:#2563eb;
+  --accent-light:#dbeafe;
+  --purple:#7c3aed;
+  --purple-light:#ede9fe;
+  --green:#059669;
+  --green-light:#d1fae5;
+  --red:#dc2626;
+  --red-light:#fee2e2;
+  --orange:#ea580c;
+  --orange-light:#fff7ed;
+  --aws-orange:#ff9900;
+  --aws-dark:#232f3e;
+  --shadow:0 1px 3px rgba(0,0,0,0.08),0 1px 2px rgba(0,0,0,0.04);
+  --shadow-lg:0 4px 12px rgba(0,0,0,0.08),0 2px 4px rgba(0,0,0,0.04);
+}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+.slide{min-height:100vh;padding:3rem 5%;display:flex;flex-direction:column;justify-content:center;border-bottom:1px solid var(--border)}
+h1{font-size:clamp(2rem,4vw,3rem);font-weight:800;color:var(--text);margin-bottom:.75rem}
+h2{font-size:clamp(1.4rem,3vw,2rem);font-weight:700;color:var(--text);margin-bottom:1rem}
+h3{font-size:1rem;font-weight:600;color:var(--accent);margin-bottom:.5rem}
+p{color:var(--text2);font-size:.95rem;max-width:70ch;margin-bottom:1rem}
+.subtitle{font-size:1.1rem;color:var(--muted);margin-bottom:2rem}
+
+/* Tags */
+.tag{display:inline-flex;align-items:center;gap:.3rem;padding:.25rem .6rem;border-radius:.375rem;font-size:.75rem;font-weight:600}
+.tag-blue{background:var(--accent-light);color:var(--accent)}
+.tag-green{background:var(--green-light);color:var(--green)}
+.tag-red{background:var(--red-light);color:var(--red)}
+.tag-purple{background:var(--purple-light);color:var(--purple)}
+.tag-orange{background:var(--orange-light);color:var(--orange)}
+
+/* AWS Console Mockup */
+.console-mock{background:var(--surface);border:1px solid var(--border);border-radius:.75rem;overflow:hidden;margin:1.5rem 0;box-shadow:var(--shadow-lg)}
+.console-header{background:var(--aws-dark);color:white;padding:.6rem 1rem;display:flex;align-items:center;gap:.75rem;font-size:.8rem}
+.console-header .aws-logo{background:var(--aws-orange);color:white;padding:.15rem .5rem;border-radius:.2rem;font-weight:700;font-size:.7rem}
+.console-header .service-name{font-weight:600}
+.console-header .breadcrumb{color:#94a3b8;margin-left:auto;font-size:.7rem}
+.console-body{padding:1.5rem}
+.console-title{font-size:1.1rem;font-weight:600;color:var(--text);margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+
+/* Form Mockup */
+.form-group{margin-bottom:1.25rem}
+.form-label{display:block;font-size:.8rem;font-weight:600;color:var(--text);margin-bottom:.35rem}
+.form-label .required{color:var(--red)}
+.form-input{width:100%;max-width:400px;padding:.5rem .75rem;border:1px solid var(--border2);border-radius:.375rem;font-size:.85rem;color:var(--text);background:white}
+.form-input:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+.form-input.filled{background:var(--accent-light);border-color:var(--accent)}
+.form-hint{font-size:.75rem;color:var(--muted);margin-top:.25rem}
+.form-row{display:flex;gap:1rem;align-items:flex-end}
+.form-section{background:var(--surface2);border:1px solid var(--border);border-radius:.5rem;padding:1rem 1.25rem;margin:1rem 0}
+.form-section-title{font-size:.85rem;font-weight:700;color:var(--text);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem}
+
+/* Toggle */
+.toggle{display:flex;align-items:center;gap:.5rem}
+.toggle-switch{width:36px;height:20px;border-radius:10px;background:var(--accent);position:relative;cursor:pointer}
+.toggle-switch::after{content:'';position:absolute;top:2px;right:2px;width:16px;height:16px;background:white;border-radius:50%;transition:.2s}
+.toggle-switch.off{background:var(--border2)}
+.toggle-switch.off::after{right:auto;left:2px}
+.toggle-label{font-size:.85rem;font-weight:500}
+
+/* Button */
+.btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1rem;border-radius:.375rem;font-size:.8rem;font-weight:600;border:none;cursor:pointer}
+.btn-primary{background:var(--accent);color:white}
+.btn-orange{background:var(--aws-orange);color:white}
+.btn-outline{background:white;color:var(--text);border:1px solid var(--border2)}
+
+/* Steps */
+.step-card{background:white;border:1px solid var(--border);border-radius:.75rem;padding:1.5rem;margin-bottom:1.5rem;box-shadow:var(--shadow);position:relative;padding-left:4rem}
+.step-card .step-num{position:absolute;left:1.5rem;top:1.5rem;width:2rem;height:2rem;background:var(--accent);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem}
+.step-card h4{font-size:.95rem;font-weight:600;margin-bottom:.35rem}
+.step-card p{font-size:.85rem;color:var(--muted);margin-bottom:.5rem}
+.step-card .nav-path{font-size:.8rem;color:var(--accent);font-weight:500;display:flex;align-items:center;gap:.3rem}
+.step-card .nav-path .sep{color:var(--border2)}
+
+/* Architecture SVG */
+.arch-container{background:var(--surface);border:1px solid var(--border);border-radius:.75rem;padding:2rem;margin:1.5rem 0;text-align:center}
+
+/* Grid */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin:1.5rem 0}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin:1.5rem 0}
+@media(max-width:768px){.grid-2,.grid-3{grid-template-columns:1fr}}
+
+/* Info box */
+.info-box{padding:1rem 1.25rem;border-radius:.5rem;margin:1rem 0;font-size:.9rem}
+.info-box.warning{background:#fffbeb;border:1px solid #fbbf24;color:#92400e}
+.info-box.success{background:var(--green-light);border:1px solid #6ee7b7;color:#065f46}
+.info-box.info{background:var(--accent-light);border:1px solid #93c5fd;color:#1e40af}
+
+/* Terminal */
+.terminal{background:var(--aws-dark);border-radius:.75rem;padding:1.25rem 1.5rem;margin:1rem 0;font-family:'JetBrains Mono',monospace;font-size:.8rem;line-height:1.9;color:#e2e8f0;overflow-x:auto}
+.terminal .prompt{color:#6ee7b7}
+.terminal .comment{color:#64748b}
+.terminal .output{color:#94a3b8}
+.terminal .success{color:#34d399}
+.terminal .error{color:#f87171}
+
+/* Navigation */
+nav{position:fixed;top:50%;right:1.5rem;transform:translateY(-50%);display:flex;flex-direction:column;gap:.4rem;z-index:100}
+nav a{background:white;border:1px solid var(--border);color:var(--muted);width:2rem;height:2rem;border-radius:50%;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:.7rem;font-weight:600;box-shadow:var(--shadow);transition:all .2s}
+nav a:hover{background:var(--accent);color:white;border-color:var(--accent)}
+
+/* Metric */
+.metric{text-align:center;padding:1.5rem;background:white;border:1px solid var(--border);border-radius:.75rem}
+.metric .value{font-size:2rem;font-weight:800;color:var(--accent)}
+.metric .label{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:.25rem}
+</style>
+</head>
+<body>
+
+<nav>
+<a href="#s1">1</a>
+<a href="#s2">2</a>
+<a href="#s3">3</a>
+<a href="#s4">4</a>
+<a href="#s5">5</a>
+<a href="#s6">6</a>
+<a href="#s7">7</a>
+<a href="#s8">8</a>
+</nav>
+
+<!-- Slide 1: Title -->
+<section class="slide" id="s1">
+<div>
+<div style="display:flex;gap:.5rem;margin-bottom:1.5rem">
+<span class="tag tag-orange">W5 MH4</span>
+<span class="tag tag-blue">Hands-on</span>
+<span class="tag tag-purple">AWS Console</span>
+</div>
+<h1>API Gateway: Throttling + API Key</h1>
+<p class="subtitle">Hướng dẫn từng bước trên AWS Console — tạo Usage Plan, API Key, bật authentication cho GeekBrain Chat API endpoint.</p>
+
+<!-- Architecture SVG inline -->
+<div class="arch-container">
+<svg width="100%" height="120" viewBox="0 0 800 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Client -->
+  <rect x="10" y="35" width="100" height="50" rx="8" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="60" y="55" text-anchor="middle" font-size="11" fill="#64748b" font-weight="600">Client</text>
+  <text x="60" y="72" text-anchor="middle" font-size="9" fill="#94a3b8">curl / Frontend</text>
+
+  <!-- Arrow 1 -->
+  <path d="M115 60 L175 60" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="145" y="50" text-anchor="middle" font-size="8" fill="#ea580c" font-weight="600">x-api-key</text>
+
+  <!-- API Gateway -->
+  <rect x="180" y="25" width="160" height="70" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="260" y="48" text-anchor="middle" font-size="11" fill="#1e40af" font-weight="700">API Gateway</text>
+  <text x="260" y="63" text-anchor="middle" font-size="9" fill="#2563eb">REST API</text>
+  <text x="260" y="78" text-anchor="middle" font-size="8" fill="#64748b">Usage Plan + API Key</text>
+
+  <!-- Arrow 2 -->
+  <path d="M345 60 L405 60" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="375" y="50" text-anchor="middle" font-size="8" fill="#059669" font-weight="600">POST /chat</text>
+
+  <!-- Lambda -->
+  <rect x="410" y="35" width="120" height="50" rx="8" fill="#fff7ed" stroke="#ea580c" stroke-width="1.5"/>
+  <text x="470" y="55" text-anchor="middle" font-size="11" fill="#9a3412" font-weight="600">Lambda</text>
+  <text x="470" y="72" text-anchor="middle" font-size="9" fill="#ea580c">Chat Handler</text>
+
+  <!-- Arrow 3 -->
+  <path d="M535 60 L595 60" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Bedrock -->
+  <rect x="600" y="35" width="130" height="50" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>
+  <text x="665" y="55" text-anchor="middle" font-size="11" fill="#5b21b6" font-weight="600">Bedrock Agent</text>
+  <text x="665" y="72" text-anchor="middle" font-size="9" fill="#7c3aed">RAG + Tools</text>
+
+  <!-- Arrow marker -->
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+</svg>
+</div>
+
+<div class="grid-3">
+<div class="metric">
+<div class="value">10</div>
+<div class="label">Rate (req/s)</div>
+</div>
+<div class="metric">
+<div class="value">20</div>
+<div class="label">Burst</div>
+</div>
+<div class="metric">
+<div class="value">1000</div>
+<div class="label">Daily Quota</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- Slide 2: Current State Console View -->
+<section class="slide" id="s2">
+<h2>Hiện trạng: API Gateway đã deploy</h2>
+<p>Terraform CI đã tạo REST API + Lambda Proxy. Dưới đây là view trên Console:</p>
+
+<div class="console-mock">
+<div class="console-header">
+<span class="aws-logo">AWS</span>
+<span class="service-name">API Gateway</span>
+<span class="breadcrumb">APIs › xbrain-chat-api › Resources</span>
+</div>
+<div class="console-body">
+<div class="console-title">Resources</div>
+<!-- Resource Tree Mockup -->
+<div style="font-family:monospace;font-size:.85rem;line-height:2.2;padding-left:1rem">
+<div style="color:var(--text);font-weight:600">/ <span style="color:var(--muted);font-weight:400">(root)</span></div>
+<div style="padding-left:1.5rem">
+<span style="color:var(--accent);font-weight:600">/chat</span>
+<div style="padding-left:1.5rem">
+<div style="display:flex;align-items:center;gap:.5rem">
+<span style="background:#059669;color:white;padding:.1rem .4rem;border-radius:.2rem;font-size:.7rem;font-weight:700">POST</span>
+<span style="color:var(--muted);font-size:.8rem">Lambda Proxy → xbrain-geekbrain-chat</span>
+<span class="tag tag-red" style="font-size:.65rem">API Key: OFF</span>
+</div>
+<div style="display:flex;align-items:center;gap:.5rem;margin-top:.3rem">
+<span style="background:var(--muted);color:white;padding:.1rem .4rem;border-radius:.2rem;font-size:.7rem;font-weight:700">OPTIONS</span>
+<span style="color:var(--muted);font-size:.8rem">Mock Integration (CORS)</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="info-box warning">
+<strong>Vấn đề:</strong> POST /chat hiện tại không yêu cầu authentication — bất kỳ ai biết URL đều gọi được Lambda, gây risk về cost và security.
+</div>
+</section>
+
+<!-- Slide 3: Step 1 - Create Usage Plan -->
+<section class="slide" id="s3">
+<h2>Bước 1: Tạo Usage Plan</h2>
+
+<div class="step-card">
+<span class="step-num">1</span>
+<h4>Navigate đến Usage Plans</h4>
+<p>Từ API Gateway console, chọn Usage Plans ở sidebar trái</p>
+<div class="nav-path">API Gateway <span class="sep">›</span> Usage Plans <span class="sep">›</span> Create</div>
+</div>
+
+<div class="console-mock">
+<div class="console-header">
+<span class="aws-logo">AWS</span>
+<span class="service-name">API Gateway</span>
+<span class="breadcrumb">Usage Plans › Create usage plan</span>
+</div>
+<div class="console-body">
+<div class="console-title">Create Usage Plan</div>
+
+<div class="form-group">
+<label class="form-label">Name <span class="required">*</span></label>
+<input class="form-input filled" type="text" value="xbrain-chat-usage-plan" readonly>
+</div>
+
+<div class="form-group">
+<label class="form-label">Description</label>
+<input class="form-input filled" type="text" value="Throttling + quota for GeekBrain Chat API" readonly>
+</div>
+
+<div class="form-section">
+<div class="form-section-title">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#2563eb" stroke-width="1.5"/><path d="M8 4v4l3 2" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/></svg>
+Throttling
+</div>
+<div class="form-row">
+<div class="form-group" style="flex:1">
+<label class="form-label">Rate (requests per second)</label>
+<input class="form-input filled" type="text" value="10" readonly>
+<div class="form-hint">Steady-state rate limit</div>
+</div>
+<div class="form-group" style="flex:1">
+<label class="form-label">Burst</label>
+<input class="form-input filled" type="text" value="20" readonly>
+<div class="form-hint">Maximum concurrent requests</div>
+</div>
+</div>
+</div>
+
+<div class="form-section">
+<div class="form-section-title">
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="#2563eb" stroke-width="1.5"/><path d="M5 8h6M8 5v6" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/></svg>
+Quota
+</div>
+<div class="form-row">
+<div class="form-group" style="flex:1">
+<label class="form-label">Requests</label>
+<input class="form-input filled" type="text" value="1000" readonly>
+</div>
+<div class="form-group" style="flex:1">
+<label class="form-label">Per</label>
+<input class="form-input filled" type="text" value="Day" readonly>
+</div>
+</div>
+</div>
+
+<div style="margin-top:1.5rem;display:flex;gap:.75rem">
+<button class="btn btn-primary">Create Usage Plan</button>
+<button class="btn btn-outline">Cancel</button>
+</div>
+</div>
+</div>
+</section>
+
+<!-- Slide 4: Associate Stage + Create API Key -->
+<section class="slide" id="s4">
+<h2>Bước 2: Associate Stage & Tạo API Key</h2>
+
+<div class="grid-2">
+<div>
+<div class="step-card" style="margin-bottom:1rem">
+<span class="step-num">2</span>
+<h4>Associate API Stage</h4>
+<p>Gắn Usage Plan vào stage prod của xbrain-chat-api</p>
+<div class="nav-path">Usage Plan <span class="sep">›</span> Associated Stages <span class="sep">›</span> Add API Stage</div>
+</div>
+
+<div class="console-mock">
+<div class="console-header">
+<span class="aws-logo">AWS</span>
+<span class="service-name">API Gateway</span>
+<span class="breadcrumb">Usage Plans › Add API Stage</span>
+</div>
+<div class="console-body" style="padding:1rem">
+<div class="form-group">
+<label class="form-label">API <span class="required">*</span></label>
+<input class="form-input filled" type="text" value="xbrain-chat-api" readonly>
+</div>
+<div class="form-group">
+<label class="form-label">Stage <span class="required">*</span></label>
+<input class="form-input filled" type="text" value="prod" readonly>
+</div>
+<button class="btn btn-primary" style="margin-top:.5rem">✓ Add</button>
+</div>
+</div>
+</div>
+
+<div>
+<div class="step-card" style="margin-bottom:1rem">
+<span class="step-num">3</span>
+<h4>Tạo API Key</h4>
+<p>Auto-generate key mới và gắn vào Usage Plan</p>
+<div class="nav-path">API Keys <span class="sep">›</span> Create API Key</div>
+</div>
+
+<div class="console-mock">
+<div class="console-header">
+<span class="aws-logo">AWS</span>
+<span class="service-name">API Gateway</span>
+<span class="breadcrumb">API Keys › Create</span>
+</div>
+<div class="console-body" style="padding:1rem">
+<div class="form-group">
+<label class="form-label">Name <span class="required">*</span></label>
+<input class="form-input filled" type="text" value="xbrain-chat-api-key" readonly>
+</div>
+<div class="form-group">
+<label class="form-label">API key source</label>
+<div class="toggle">
+<div class="toggle-switch"></div>
+<span class="toggle-label">Auto Generate</span>
+</div>
+</div>
+<button class="btn btn-primary" style="margin-top:.5rem">Save</button>
+</div>
+</div>
+</div>
+</div>
+
+<div class="info-box info">
+<strong>Tip:</strong> Sau khi tạo API Key, vào Usage Plan → API Keys tab → Add API Key để associate key với plan.
+</div>
+</section>
+
+<!-- Slide 5: Enable API Key Required -->
+<section class="slide" id="s5">
+<h2>Bước 3: Bật API Key Required</h2>
+
+<div class="step-card">
+<span class="step-num">4</span>
+<h4>Method Request → API Key Required = true</h4>
+<p>Đây là bước quan trọng nhất — bật authentication trên POST /chat</p>
+<div class="nav-path">APIs <span class="sep">›</span> xbrain-chat-api <span class="sep">›</span> /chat <span class="sep">›</span> POST <span class="sep">›</span> Method Request</div>
+</div>
+
+<div class="console-mock">
+<div class="console-header">
+<span class="aws-logo">AWS</span>
+<span class="service-name">API Gateway</span>
+<span class="breadcrumb">xbrain-chat-api › /chat › POST › Method Request</span>
+</div>
+<div class="console-body">
+<div class="console-title">Method Request — POST /chat</div>
+
+<div style="display:grid;grid-template-columns:200px 1fr;gap:.75rem 1rem;font-size:.85rem">
+<div style="color:var(--muted);font-weight:500">Authorization</div>
+<div>NONE</div>
+
+<div style="color:var(--muted);font-weight:500">Request Validator</div>
+<div>NONE</div>
+
+<div style="color:var(--text);font-weight:700;background:var(--green-light);padding:.3rem .6rem;border-radius:.3rem">API Key Required</div>
+<div style="display:flex;align-items:center;gap:.75rem">
+<div class="toggle">
+<div class="toggle-switch"></div>
+<span class="toggle-label" style="color:var(--green);font-weight:700">true</span>
+</div>
+<span class="tag tag-green">CHANGED</span>
+</div>
+
+<div style="color:var(--muted);font-weight:500">OAuth Scopes</div>
+<div>—</div>
+</div>
+</div>
+</div>
+
+<div class="info-box warning">
+<strong>Quan trọng:</strong> Thay đổi này chưa có hiệu lực cho đến khi Deploy API! Phải redeploy sang stage prod.
+</div>
+</section>
+
+<!-- Slide 6: Deploy API -->
+<section class="slide" id="s6">
+<h2>Bước 4: Deploy API</h2>
+
+<div class="step-card">
+<span class="step-num">5</span>
+<h4>Deploy lại API sang stage prod</h4>
+<p>Sau khi thay đổi API Key Required, phải deploy lại để cập nhật</p>
+<div class="nav-path">APIs <span class="sep">›</span> xbrain-chat-api <span class="sep">›</span> Actions <span class="sep">›</span> Deploy API</div>
+</div>
+
+<div class="console-mock">
+<div class="console-header">
+<span class="aws-logo">AWS</span>
+<span class="service-name">API Gateway</span>
+<span class="breadcrumb">Deploy API</span>
+</div>
+<div class="console-body">
+<div class="console-title" style="border-bottom:none;margin-bottom:.5rem">Deploy API</div>
+<p style="font-size:.85rem;color:var(--muted);margin-bottom:1.5rem">Deploy the current API configuration to a stage.</p>
+
+<div class="form-group">
+<label class="form-label">Deployment stage <span class="required">*</span></label>
+<input class="form-input filled" type="text" value="prod" readonly>
+</div>
+
+<div class="form-group">
+<label class="form-label">Deployment description</label>
+<input class="form-input filled" type="text" value="W5 MH4: Enable API Key Required + Usage Plan" readonly>
+</div>
+
+<div style="margin-top:1.5rem;display:flex;gap:.75rem">
+<button class="btn btn-orange">Deploy</button>
+<button class="btn btn-outline">Cancel</button>
+</div>
+</div>
+</div>
+
+<div class="info-box success">
+<strong>Sau deploy:</strong> Invoke URL: <code>https://{api-id}.execute-api.us-west-2.amazonaws.com/prod/chat</code>
+</div>
+</section>
+
+<!-- Slide 7: Test Results -->
+<section class="slide" id="s7">
+<h2>Bước 5: Test curl — Evidence cho W5</h2>
+
+<div class="grid-2">
+<div>
+<h3 style="color:var(--green)">Test 1: Authenticated → 200</h3>
+<div class="terminal">
+<span class="prompt">$ </span>curl -s -X POST \<br>
+&nbsp;&nbsp;"https://abc123.execute-api.us-west-2.amazonaws.com/prod/chat" \<br>
+&nbsp;&nbsp;-H "Content-Type: application/json" \<br>
+&nbsp;&nbsp;-H "x-api-key: aB3kLm9xPq2rSt5uVw8yZ" \<br>
+&nbsp;&nbsp;-d '{"question":"What is GeekBrain?"}' | jq .<br>
+<br>
+<span class="success">{</span><br>
+<span class="success">&nbsp;&nbsp;"statusCode": 200,</span><br>
+<span class="success">&nbsp;&nbsp;"body": {</span><br>
+<span class="success">&nbsp;&nbsp;&nbsp;&nbsp;"answer": "GeekBrain is a fintech startup...",</span><br>
+<span class="success">&nbsp;&nbsp;&nbsp;&nbsp;"session_id": "default-session",</span><br>
+<span class="success">&nbsp;&nbsp;&nbsp;&nbsp;"sources": ["company-overview.md"]</span><br>
+<span class="success">&nbsp;&nbsp;}</span><br>
+<span class="success">}</span>
+</div>
+</div>
+
+<div>
+<h3 style="color:var(--red)">Test 2: No API Key → 403</h3>
+<div class="terminal">
+<span class="prompt">$ </span>curl -s -X POST \<br>
+&nbsp;&nbsp;"https://abc123.execute-api.us-west-2.amazonaws.com/prod/chat" \<br>
+&nbsp;&nbsp;-H "Content-Type: application/json" \<br>
+&nbsp;&nbsp;-d '{"question":"What is GeekBrain?"}' | jq .<br>
+<br>
+<span class="error">{</span><br>
+<span class="error">&nbsp;&nbsp;"message": "Forbidden"</span><br>
+<span class="error">}</span><br>
+<br>
+<span class="comment"># HTTP Status: 403 Forbidden</span><br>
+<span class="comment"># Lambda was NOT invoked → cost saved</span>
+</div>
+</div>
+</div>
+
+<div class="info-box info" style="margin-top:1.5rem">
+<strong>Evidence Pack:</strong> Chụp screenshot cả 2 terminal output này cho <code>docs/W5_evidence.md</code> mục MH4.
+</div>
+</section>
+
+<!-- Slide 8: Summary Checklist -->
+<section class="slide" id="s8">
+<h2>Checklist hoàn thành</h2>
+
+<div style="max-width:600px">
+<div style="padding:.75rem 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.75rem">
+<span style="color:var(--green);font-size:1.2rem">✓</span>
+<div><strong>REST API created</strong><br><span style="color:var(--muted);font-size:.85rem">xbrain-chat-api (Regional) — Terraform deployed</span></div>
+</div>
+<div style="padding:.75rem 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.75rem">
+<span style="color:var(--green);font-size:1.2rem">✓</span>
+<div><strong>Lambda Proxy Integration</strong><br><span style="color:var(--muted);font-size:.85rem">POST /chat → xbrain-geekbrain-chat</span></div>
+</div>
+<div style="padding:.75rem 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.75rem">
+<span style="color:var(--green);font-size:1.2rem">✓</span>
+<div><strong>Throttling configured</strong><br><span style="color:var(--muted);font-size:.85rem">Usage Plan: 10 req/s, burst 20, 1000/day quota</span></div>
+</div>
+<div style="padding:.75rem 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.75rem">
+<span style="color:var(--green);font-size:1.2rem">✓</span>
+<div><strong>Authentication: API Key</strong><br><span style="color:var(--muted);font-size:.85rem">POST method requires x-api-key header</span></div>
+</div>
+<div style="padding:.75rem 0;display:flex;align-items:center;gap:.75rem">
+<span style="color:var(--green);font-size:1.2rem">✓</span>
+<div><strong>Evidence: 200 + 403</strong><br><span style="color:var(--muted);font-size:.85rem">curl tests documented for Evidence Pack</span></div>
+</div>
+</div>
+
+<div style="margin-top:2rem;padding:1.5rem;background:var(--surface);border-radius:.75rem;border:1px solid var(--border)">
+<h3 style="margin-bottom:.5rem">Thời gian thực hiện</h3>
+<div style="display:flex;gap:2rem">
+<div>
+<div style="font-size:1.5rem;font-weight:800;color:var(--accent)">~10 phút</div>
+<div style="font-size:.8rem;color:var(--muted)">Console hands-on</div>
+</div>
+<div>
+<div style="font-size:1.5rem;font-weight:800;color:var(--green)">5 steps</div>
+<div style="font-size:.8rem;color:var(--muted)">Total operations</div>
+</div>
+</div>
+</div>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MH4 — Task Overview: API Gateway + Throttling + Auth</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#ffffff;--surface:#f8fafc;--surface2:#f1f5f9;
+  --border:#e2e8f0;--border2:#cbd5e1;
+  --text:#0f172a;--text2:#334155;--muted:#64748b;
+  --accent:#2563eb;--accent-light:#dbeafe;
+  --purple:#7c3aed;--purple-light:#ede9fe;
+  --green:#059669;--green-light:#d1fae5;
+  --red:#dc2626;--red-light:#fee2e2;
+  --orange:#ea580c;--orange-light:#fff7ed;
+  --cyan:#0891b2;--cyan-light:#cffafe;
+  --aws-orange:#ff9900;--aws-dark:#232f3e;
+  --shadow:0 1px 3px rgba(0,0,0,0.06);
+  --shadow-lg:0 4px 12px rgba(0,0,0,0.08);
+}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+.slide{min-height:100vh;padding:3.5rem 5%;display:flex;flex-direction:column;justify-content:center;border-bottom:1px solid var(--border)}
+h1{font-size:clamp(2rem,4vw,3rem);font-weight:800;margin-bottom:.75rem}
+h2{font-size:clamp(1.3rem,2.5vw,1.8rem);font-weight:700;margin-bottom:1.25rem}
+h3{font-size:.9rem;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem}
+p{color:var(--text2);font-size:.95rem;max-width:65ch;margin-bottom:1rem}
+.tag{display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .6rem;border-radius:.3rem;font-size:.7rem;font-weight:600}
+.tag-blue{background:var(--accent-light);color:var(--accent)}
+.tag-green{background:var(--green-light);color:var(--green)}
+.tag-red{background:var(--red-light);color:var(--red)}
+.tag-purple{background:var(--purple-light);color:var(--purple)}
+.tag-orange{background:var(--orange-light);color:var(--orange)}
+.tag-cyan{background:var(--cyan-light);color:var(--cyan)}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin:1.5rem 0}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin:1.5rem 0}
+@media(max-width:768px){.grid-2,.grid-3{grid-template-columns:1fr}}
+
+.card{background:white;border:1px solid var(--border);border-radius:.75rem;padding:1.5rem;box-shadow:var(--shadow);transition:box-shadow .2s}
+.card:hover{box-shadow:var(--shadow-lg)}
+.card-header{display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem}
+.card-icon{width:36px;height:36px;border-radius:.5rem;display:flex;align-items:center;justify-content:center}
+
+.metric{text-align:center;padding:1.5rem;background:var(--surface);border:1px solid var(--border);border-radius:.75rem}
+.metric .value{font-size:2.2rem;font-weight:800}
+.metric .label{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:.3rem}
+
+.comparison{display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin:1.5rem 0}
+@media(max-width:768px){.comparison{grid-template-columns:1fr}}
+.comp-card{background:white;border-radius:.75rem;padding:1.5rem;border:1px solid var(--border);box-shadow:var(--shadow)}
+.comp-card.bad{border-top:3px solid var(--red)}
+.comp-card.good{border-top:3px solid var(--green)}
+.comp-list{list-style:none;padding:0;margin:.75rem 0}
+.comp-list li{padding:.4rem 0;font-size:.85rem;color:var(--text2);display:flex;align-items:flex-start;gap:.5rem}
+.comp-list li .dot{width:7px;height:7px;border-radius:50%;margin-top:.4rem;flex-shrink:0}
+
+.timeline{margin:2rem 0;position:relative;padding-left:3rem}
+.timeline::before{content:'';position:absolute;left:1rem;top:.5rem;bottom:.5rem;width:2px;background:linear-gradient(to bottom,var(--accent),var(--green))}
+.tl-item{position:relative;margin-bottom:1.75rem}
+.tl-item::before{content:attr(data-step);position:absolute;left:-2.5rem;top:0;width:1.75rem;height:1.75rem;background:var(--accent);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700}
+.tl-item:nth-child(2)::before{background:var(--purple)}
+.tl-item:nth-child(3)::before{background:var(--cyan)}
+.tl-item:nth-child(4)::before{background:var(--green)}
+.tl-item h4{font-size:.95rem;font-weight:600;margin-bottom:.2rem}
+.tl-item p{font-size:.85rem;color:var(--muted);margin-bottom:0}
+
+.task-table{width:100%;border-collapse:collapse;font-size:.85rem;margin:1.5rem 0}
+.task-table th{text-align:left;padding:.6rem .75rem;background:var(--surface);color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+.task-table td{padding:.6rem .75rem;border-bottom:1px solid var(--border)}
+.task-table tr:hover td{background:var(--surface)}
+.status{font-size:.75rem;font-weight:600;padding:.15rem .5rem;border-radius:.2rem}
+.status-done{background:var(--green-light);color:var(--green)}
+.status-todo{background:var(--orange-light);color:var(--orange)}
+
+nav{position:fixed;top:50%;right:1rem;transform:translateY(-50%);display:flex;flex-direction:column;gap:.35rem;z-index:100}
+nav a{background:white;border:1px solid var(--border);color:var(--muted);width:1.8rem;height:1.8rem;border-radius:50%;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:.65rem;font-weight:600;box-shadow:var(--shadow);transition:all .2s}
+nav a:hover{background:var(--accent);color:white;border-color:var(--accent)}
+
+.info-box{padding:1rem 1.25rem;border-radius:.5rem;margin:1rem 0;font-size:.85rem}
+.info-box.info{background:var(--accent-light);border:1px solid #93c5fd;color:#1e40af}
+</style>
+</head>
+<body>
+
+<nav>
+<a href="#s1">1</a>
+<a href="#s2">2</a>
+<a href="#s3">3</a>
+<a href="#s4">4</a>
+<a href="#s5">5</a>
+<a href="#s6">6</a>
+</nav>
+
+<!-- Slide 1: Title -->
+<section class="slide" id="s1">
+<div>
+<div style="display:flex;gap:.4rem;margin-bottom:1.5rem">
+<span class="tag tag-orange">Week 5</span>
+<span class="tag tag-blue">MH4</span>
+<span class="tag tag-purple">API Gateway</span>
+<span class="tag tag-green">Terraform</span>
+</div>
+<h1>API Gateway trước Chat Lambda</h1>
+<p style="font-size:1.05rem;color:var(--text2)">Expose Chat Lambda qua API Gateway REST API với throttling và API Key authentication — biến raw Lambda invocation thành production-grade API surface.</p>
+
+<!-- Inline Architecture SVG -->
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:.75rem;padding:2rem;margin-top:2rem">
+<svg width="100%" height="180" viewBox="0 0 900 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Client Box -->
+  <rect x="10" y="55" width="110" height="70" rx="10" fill="white" stroke="#e2e8f0" stroke-width="2"/>
+  <rect x="10" y="55" width="110" height="24" rx="10" fill="#f1f5f9"/>
+  <text x="65" y="71" text-anchor="middle" font-size="10" fill="#64748b" font-weight="600">CLIENT</text>
+  <text x="65" y="95" text-anchor="middle" font-size="11" fill="#0f172a" font-weight="600">Frontend</text>
+  <text x="65" y="112" text-anchor="middle" font-size="9" fill="#64748b">curl / Browser</text>
+
+  <!-- Arrow 1 with label -->
+  <line x1="125" y1="90" x2="195" y2="90" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4"/>
+  <polygon points="192,85 200,90 192,95" fill="#94a3b8"/>
+  <rect x="135" y="70" width="55" height="16" rx="3" fill="#fff7ed" stroke="#fed7aa"/>
+  <text x="162" y="81" text-anchor="middle" font-size="8" fill="#ea580c" font-weight="600">x-api-key</text>
+
+  <!-- API Gateway Box (main) -->
+  <rect x="200" y="30" width="200" height="120" rx="12" fill="white" stroke="#2563eb" stroke-width="2"/>
+  <rect x="200" y="30" width="200" height="28" rx="12" fill="#dbeafe"/>
+  <text x="300" y="49" text-anchor="middle" font-size="11" fill="#1e40af" font-weight="700">API GATEWAY</text>
+
+  <!-- Sub-boxes inside API GW -->
+  <rect x="215" y="68" width="80" height="32" rx="5" fill="#ede9fe" stroke="#c4b5fd"/>
+  <text x="255" y="88" text-anchor="middle" font-size="9" fill="#5b21b6" font-weight="600">Usage Plan</text>
+
+  <rect x="305" y="68" width="80" height="32" rx="5" fill="#fef3c7" stroke="#fcd34d"/>
+  <text x="345" y="88" text-anchor="middle" font-size="9" fill="#92400e" font-weight="600">API Key Auth</text>
+
+  <rect x="215" y="108" width="170" height="28" rx="5" fill="#f1f5f9" stroke="#e2e8f0"/>
+  <text x="300" y="126" text-anchor="middle" font-size="9" fill="#64748b" font-weight="500">POST /chat → Lambda Proxy</text>
+
+  <!-- Arrow 2 -->
+  <line x1="405" y1="90" x2="465" y2="90" stroke="#cbd5e1" stroke-width="2"/>
+  <polygon points="462,85 470,90 462,95" fill="#94a3b8"/>
+
+  <!-- Reject Arrow (down) -->
+  <line x1="300" y1="155" x2="300" y2="175" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="3"/>
+  <text x="300" y="175" text-anchor="middle" font-size="9" fill="#dc2626" font-weight="600">403 / 429</text>
+
+  <!-- Lambda Box -->
+  <rect x="470" y="55" width="130" height="70" rx="10" fill="white" stroke="#ea580c" stroke-width="2"/>
+  <rect x="470" y="55" width="130" height="24" rx="10" fill="#fff7ed"/>
+  <text x="535" y="71" text-anchor="middle" font-size="10" fill="#ea580c" font-weight="600">LAMBDA</text>
+  <text x="535" y="95" text-anchor="middle" font-size="11" fill="#0f172a" font-weight="600">Chat Handler</text>
+  <text x="535" y="112" text-anchor="middle" font-size="9" fill="#64748b">Python 3.12</text>
+
+  <!-- Arrow 3 -->
+  <line x1="605" y1="90" x2="665" y2="90" stroke="#cbd5e1" stroke-width="2"/>
+  <polygon points="662,85 670,90 662,95" fill="#94a3b8"/>
+
+  <!-- Bedrock Box -->
+  <rect x="670" y="40" width="160" height="100" rx="10" fill="white" stroke="#7c3aed" stroke-width="2"/>
+  <rect x="670" y="40" width="160" height="24" rx="10" fill="#ede9fe"/>
+  <text x="750" y="56" text-anchor="middle" font-size="10" fill="#7c3aed" font-weight="600">BEDROCK AGENT</text>
+
+  <rect x="685" y="72" width="60" height="22" rx="4" fill="#dbeafe" stroke="#93c5fd"/>
+  <text x="715" y="87" text-anchor="middle" font-size="8" fill="#1e40af" font-weight="500">KB RAG</text>
+
+  <rect x="755" y="72" width="60" height="22" rx="4" fill="#d1fae5" stroke="#6ee7b7"/>
+  <text x="785" y="87" text-anchor="middle" font-size="8" fill="#065f46" font-weight="500">Tools</text>
+
+  <rect x="685" y="102" width="130" height="22" rx="4" fill="#f1f5f9" stroke="#e2e8f0"/>
+  <text x="750" y="117" text-anchor="middle" font-size="8" fill="#64748b">OpenSearch + Action Group</text>
+</svg>
+</div>
+</div>
+</section>
+
+<!-- Slide 2: Problem → Solution -->
+<section class="slide" id="s2">
+<h2>Vấn đề & Giải pháp</h2>
+
+<div class="comparison">
+<div class="comp-card bad">
+<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="9" stroke="#dc2626" stroke-width="2"/><path d="M7 7l6 6M13 7l-6 6" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/></svg>
+<h3 style="color:var(--red);margin-bottom:0">Trước (hiện tại)</h3>
+</div>
+<ul class="comp-list">
+<li><span class="dot" style="background:var(--red)"></span>POST /chat không yêu cầu authentication</li>
+<li><span class="dot" style="background:var(--red)"></span>Không giới hạn request rate</li>
+<li><span class="dot" style="background:var(--red)"></span>Ai biết URL đều invoke Lambda được</li>
+<li><span class="dot" style="background:var(--red)"></span>Cost không predictable (Lambda + Bedrock)</li>
+<li><span class="dot" style="background:var(--red)"></span>Vulnerable to abuse / DDoS</li>
+</ul>
+</div>
+
+<div class="comp-card good">
+<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="9" stroke="#059669" stroke-width="2"/><path d="M6 10l3 3 5-6" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<h3 style="color:var(--green);margin-bottom:0">Sau (MH4)</h3>
+</div>
+<ul class="comp-list">
+<li><span class="dot" style="background:var(--green)"></span>API Key bắt buộc → 403 nếu thiếu</li>
+<li><span class="dot" style="background:var(--green)"></span>Throttling: 10 req/s, burst 20</li>
+<li><span class="dot" style="background:var(--green)"></span>Quota: 1000 requests/day</li>
+<li><span class="dot" style="background:var(--green)"></span>Lambda chỉ invoke khi auth pass</li>
+<li><span class="dot" style="background:var(--green)"></span>Cost predictable, DDoS-resistant</li>
+</ul>
+</div>
+</div>
+
+<!-- Visual: Request flow with reject -->
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:.75rem;padding:1.5rem;margin-top:1.5rem">
+<svg width="100%" height="100" viewBox="0 0 700 100" fill="none">
+  <!-- Happy path -->
+  <rect x="10" y="10" width="90" height="35" rx="6" fill="white" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="55" y="32" text-anchor="middle" font-size="10" fill="#334155" font-weight="600">Request</text>
+
+  <line x1="105" y1="27" x2="155" y2="27" stroke="#059669" stroke-width="2"/>
+  <polygon points="152,22 160,27 152,32" fill="#059669"/>
+
+  <rect x="160" y="10" width="100" height="35" rx="6" fill="#d1fae5" stroke="#6ee7b7" stroke-width="1.5"/>
+  <text x="210" y="25" text-anchor="middle" font-size="9" fill="#065f46" font-weight="600">API Key ✓</text>
+  <text x="210" y="38" text-anchor="middle" font-size="8" fill="#059669">Valid</text>
+
+  <line x1="265" y1="27" x2="315" y2="27" stroke="#059669" stroke-width="2"/>
+  <polygon points="312,22 320,27 312,32" fill="#059669"/>
+
+  <rect x="320" y="10" width="100" height="35" rx="6" fill="#d1fae5" stroke="#6ee7b7" stroke-width="1.5"/>
+  <text x="370" y="25" text-anchor="middle" font-size="9" fill="#065f46" font-weight="600">Throttle ✓</text>
+  <text x="370" y="38" text-anchor="middle" font-size="8" fill="#059669">Under limit</text>
+
+  <line x1="425" y1="27" x2="475" y2="27" stroke="#059669" stroke-width="2"/>
+  <polygon points="472,22 480,27 472,32" fill="#059669"/>
+
+  <rect x="480" y="10" width="80" height="35" rx="6" fill="white" stroke="#059669" stroke-width="2"/>
+  <text x="520" y="32" text-anchor="middle" font-size="10" fill="#059669" font-weight="700">200 OK</text>
+
+  <!-- Reject path -->
+  <rect x="10" y="60" width="90" height="35" rx="6" fill="white" stroke="#e2e8f0" stroke-width="1.5"/>
+  <text x="55" y="82" text-anchor="middle" font-size="10" fill="#334155" font-weight="600">Request</text>
+
+  <line x1="105" y1="77" x2="155" y2="77" stroke="#dc2626" stroke-width="2"/>
+  <polygon points="152,72 160,77 152,82" fill="#dc2626"/>
+
+  <rect x="160" y="60" width="100" height="35" rx="6" fill="#fee2e2" stroke="#fca5a5" stroke-width="1.5"/>
+  <text x="210" y="75" text-anchor="middle" font-size="9" fill="#991b1b" font-weight="600">API Key ✗</text>
+  <text x="210" y="88" text-anchor="middle" font-size="8" fill="#dc2626">Missing/Invalid</text>
+
+  <line x1="265" y1="77" x2="475" y2="77" stroke="#dc2626" stroke-width="2" stroke-dasharray="4"/>
+  <polygon points="472,72 480,77 472,82" fill="#dc2626"/>
+
+  <rect x="480" y="60" width="80" height="35" rx="6" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+  <text x="520" y="82" text-anchor="middle" font-size="10" fill="#dc2626" font-weight="700">403</text>
+
+  <!-- No Lambda label -->
+  <text x="600" y="82" font-size="9" fill="#64748b">Lambda NOT invoked</text>
+</svg>
+</div>
+</section>
+
+<!-- Slide 3: Metrics -->
+<section class="slide" id="s3">
+<h2>Throttling Configuration</h2>
+<p>Usage Plan bảo vệ Lambda + Bedrock Agent khỏi overload bằng token bucket algorithm:</p>
+
+<div class="grid-3">
+<div class="metric">
+<div class="value" style="color:var(--accent)">10</div>
+<div class="label">Rate Limit<br><span style="font-size:.65rem;letter-spacing:0">requests / second</span></div>
+</div>
+<div class="metric">
+<div class="value" style="color:var(--purple)">20</div>
+<div class="label">Burst Capacity<br><span style="font-size:.65rem;letter-spacing:0">concurrent spike</span></div>
+</div>
+<div class="metric">
+<div class="value" style="color:var(--green)">1,000</div>
+<div class="label">Daily Quota<br><span style="font-size:.65rem;letter-spacing:0">requests / day</span></div>
+</div>
+</div>
+
+<!-- Token bucket diagram -->
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:.75rem;padding:2rem;margin-top:2rem">
+<h3 style="margin-bottom:1rem">Token Bucket Algorithm</h3>
+<svg width="100%" height="140" viewBox="0 0 600 140" fill="none">
+  <!-- Bucket -->
+  <path d="M200 30 L200 110 Q200 120 210 120 L310 120 Q320 120 320 110 L320 30" fill="none" stroke="#2563eb" stroke-width="2"/>
+  <ellipse cx="260" cy="30" rx="60" ry="12" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+
+  <!-- Tokens (circles) -->
+  <circle cx="230" cy="100" r="8" fill="#2563eb"/><text x="230" y="104" text-anchor="middle" font-size="7" fill="white" font-weight="700">T</text>
+  <circle cx="250" cy="100" r="8" fill="#2563eb"/><text x="250" y="104" text-anchor="middle" font-size="7" fill="white" font-weight="700">T</text>
+  <circle cx="270" cy="100" r="8" fill="#2563eb"/><text x="270" y="104" text-anchor="middle" font-size="7" fill="white" font-weight="700">T</text>
+  <circle cx="290" cy="100" r="8" fill="#2563eb"/><text x="290" y="104" text-anchor="middle" font-size="7" fill="white" font-weight="700">T</text>
+  <circle cx="240" cy="80" r="8" fill="#93c5fd"/><text x="240" y="84" text-anchor="middle" font-size="7" fill="white" font-weight="700">T</text>
+  <circle cx="260" cy="80" r="8" fill="#93c5fd"/><text x="260" y="84" text-anchor="middle" font-size="7" fill="white" font-weight="700">T</text>
+  <circle cx="280" cy="80" r="8" fill="#93c5fd"/><text x="280" y="84" text-anchor="middle" font-size="7" fill="white" font-weight="700">T</text>
+
+  <!-- Refill arrow -->
+  <path d="M260 5 L260 18" stroke="#059669" stroke-width="2" marker-end="url(#arrowG)"/>
+  <text x="260" y="0" text-anchor="middle" font-size="9" fill="#059669" font-weight="600">+10 tokens/s</text>
+
+  <!-- Output arrow -->
+  <path d="M325 90 L380 90" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowB)"/>
+  <text x="353" y="82" text-anchor="middle" font-size="8" fill="#2563eb" font-weight="500">consume</text>
+
+  <!-- Labels -->
+  <text x="260" y="138" text-anchor="middle" font-size="10" fill="#64748b">Bucket capacity: 20 (burst)</text>
+
+  <!-- Request box -->
+  <rect x="385" y="75" width="80" height="30" rx="5" fill="#d1fae5" stroke="#6ee7b7"/>
+  <text x="425" y="95" text-anchor="middle" font-size="9" fill="#065f46" font-weight="600">→ Lambda</text>
+
+  <!-- Overflow -->
+  <rect x="385" y="115" width="80" height="20" rx="4" fill="#fee2e2" stroke="#fca5a5"/>
+  <text x="425" y="129" text-anchor="middle" font-size="8" fill="#991b1b" font-weight="600">429 Throttled</text>
+  <text x="500" y="129" font-size="8" fill="#64748b">(bucket empty)</text>
+
+  <defs>
+    <marker id="arrowG" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#059669"/></marker>
+    <marker id="arrowB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2563eb"/></marker>
+  </defs>
+</svg>
+</div>
+</section>
+
+<!-- Slide 4: Implementation Plan -->
+<section class="slide" id="s4">
+<h2>Kế hoạch triển khai</h2>
+
+<div class="timeline">
+<div class="tl-item" data-step="1">
+<h4>Terraform code — thêm Usage Plan + API Key</h4>
+<p>Thêm 3 resources mới vào module/GeekBrain_Backend/main.tf. Sửa 1 dòng api_key_required = true.</p>
+</div>
+<div class="tl-item" data-step="2">
+<h4>Push → GitHub Actions CI tự động deploy</h4>
+<p>terraform init → validate → plan → apply. API Gateway được cập nhật trên AWS.</p>
+</div>
+<div class="tl-item" data-step="3">
+<h4>Lấy API Key từ Terraform output</h4>
+<p>terraform output -raw geekbrain_api_key_value → copy key cho test.</p>
+</div>
+<div class="tl-item" data-step="4">
+<h4>Test curl 200 + 403 → Evidence Pack</h4>
+<p>Screenshot terminal output cho docs/W5_evidence.md mục MH4.</p>
+</div>
+</div>
+
+<div class="info-box info">
+<strong>Lưu ý:</strong> Toàn bộ triển khai bằng Terraform — không cần thao tác trên AWS Console. Infrastructure as Code đảm bảo reproducible khi account reset hàng tuần.
+</div>
+</section>
+
+<!-- Slide 5: Task Table -->
+<section class="slide" id="s5">
+<h2>Chi tiết công việc</h2>
+
+<table class="task-table">
+<thead>
+<tr><th>Task</th><th>Method</th><th>Time</th><th>Status</th></tr>
+</thead>
+<tbody>
+<tr><td>REST API + Lambda Proxy Integration</td><td>Terraform (W4)</td><td>—</td><td><span class="status status-done">Done</span></td></tr>
+<tr><td>/chat route POST + OPTIONS (CORS)</td><td>Terraform (W4)</td><td>—</td><td><span class="status status-done">Done</span></td></tr>
+<tr><td>Stage prod deployed</td><td>Terraform (W4)</td><td>—</td><td><span class="status status-done">Done</span></td></tr>
+<tr><td>Usage Plan (throttle + quota)</td><td>Terraform (new)</td><td>5 min</td><td><span class="status status-todo">PR #13</span></td></tr>
+<tr><td>API Key + associate with plan</td><td>Terraform (new)</td><td>3 min</td><td><span class="status status-todo">PR #13</span></td></tr>
+<tr><td>api_key_required = true</td><td>Terraform (1 line)</td><td>1 min</td><td><span class="status status-todo">PR #13</span></td></tr>
+<tr><td>Outputs: key value, plan ID</td><td>Terraform (new)</td><td>2 min</td><td><span class="status status-todo">PR #13</span></td></tr>
+<tr><td>Merge PR → CI auto-deploy</td><td>GitHub Actions</td><td>~5 min</td><td><span class="status status-todo">Pending</span></td></tr>
+<tr><td>Test curl 200 + 403</td><td>Terminal</td><td>2 min</td><td><span class="status status-todo">After deploy</span></td></tr>
+</tbody>
+</table>
+
+<div style="display:flex;gap:3rem;margin-top:2rem">
+<div>
+<div style="font-size:2rem;font-weight:800;color:var(--accent)">~18 min</div>
+<div style="font-size:.8rem;color:var(--muted)">Total estimated time</div>
+</div>
+<div>
+<div style="font-size:2rem;font-weight:800;color:var(--green)">+65 lines</div>
+<div style="font-size:.8rem;color:var(--muted)">Terraform code added</div>
+</div>
+<div>
+<div style="font-size:2rem;font-weight:800;color:var(--purple)">4 files</div>
+<div style="font-size:.8rem;color:var(--muted)">Changed</div>
+</div>
+</div>
+</section>
+
+<!-- Slide 6: Acceptance Criteria -->
+<section class="slide" id="s6">
+<h2>Acceptance Criteria</h2>
+
+<div class="grid-2">
+<div class="card">
+<div class="card-header">
+<div class="card-icon" style="background:var(--green-light)">
+<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="#059669" stroke-width="2"/><path d="M5.5 9l2.5 2.5 4.5-5" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</div>
+<strong>REST API created</strong>
+</div>
+<p style="font-size:.85rem;margin-bottom:0">xbrain-chat-api (Regional REST API)</p>
+</div>
+
+<div class="card">
+<div class="card-header">
+<div class="card-icon" style="background:var(--green-light)">
+<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="#059669" stroke-width="2"/><path d="M5.5 9l2.5 2.5 4.5-5" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</div>
+<strong>Lambda Proxy Integration</strong>
+</div>
+<p style="font-size:.85rem;margin-bottom:0">POST /chat → xbrain-geekbrain-chat</p>
+</div>
+
+<div class="card">
+<div class="card-header">
+<div class="card-icon" style="background:var(--green-light)">
+<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="#059669" stroke-width="2"/><path d="M5.5 9l2.5 2.5 4.5-5" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</div>
+<strong>Throttling configured</strong>
+</div>
+<p style="font-size:.85rem;margin-bottom:0">10 req/s rate, 20 burst, 1000/day quota</p>
+</div>
+
+<div class="card">
+<div class="card-header">
+<div class="card-icon" style="background:var(--green-light)">
+<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="#059669" stroke-width="2"/><path d="M5.5 9l2.5 2.5 4.5-5" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</div>
+<strong>Auth: 200 + 403 verified</strong>
+</div>
+<p style="font-size:.85rem;margin-bottom:0">curl with x-api-key → 200, without → 403</p>
+</div>
+</div>
+
+<div style="margin-top:2rem;padding:1.5rem;background:var(--surface);border-radius:.75rem;border:1px solid var(--border)">
+<h3>Evidence Pack entries (docs/W5_evidence.md)</h3>
+<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem;margin-top:.75rem;font-size:.85rem">
+<div style="display:flex;align-items:center;gap:.4rem"><span class="tag tag-blue">1</span> Terraform plan output</div>
+<div style="display:flex;align-items:center;gap:.4rem"><span class="tag tag-blue">2</span> API Gateway console screenshot</div>
+<div style="display:flex;align-items:center;gap:.4rem"><span class="tag tag-green">3</span> curl 200 (authenticated)</div>
+<div style="display:flex;align-items:center;gap:.4rem"><span class="tag tag-red">4</span> curl 403 (unauthenticated)</div>
+</div>
+</div>
+</section>
+
+<div style="text-align:center;padding:2rem;font-size:.75rem;color:var(--muted);border-top:1px solid var(--border)">
+G9 — XBrain Infrastructure — W5: The Network Fortress — MH4 API Gateway
+</div>
+
+</body>
+</html>

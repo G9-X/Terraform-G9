@@ -45,3 +45,21 @@ variable "db_password" {
   default   = ""
   sensitive = true
 }
+
+variable "api_throttle_rate_limit" {
+  description = "API Gateway throttle rate limit (requests/second)"
+  type        = number
+  default     = 10
+}
+
+variable "api_throttle_burst_limit" {
+  description = "API Gateway throttle burst limit"
+  type        = number
+  default     = 20
+}
+
+variable "api_quota_limit" {
+  description = "API Gateway daily quota limit"
+  type        = number
+  default     = 1000
+}
