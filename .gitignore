@@ -8,3 +8,5 @@ override.tf
 override.tf.json
 *.tfplan
 *tfplan*
+db.sql
+parse_schema.py

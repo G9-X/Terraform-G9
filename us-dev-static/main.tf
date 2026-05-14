@@ -55,6 +55,20 @@ resource "aws_cloudfront_origin_access_control" "static_site" {
   signing_protocol                  = "sigv4"
 }
 
+data "aws_cloudfront_cache_policy" "caching_disabled" {
+  count = local.use_cloudfront ? 1 : 0
+  name  = "Managed-CachingDisabled"
+}
+
+data "aws_cloudfront_origin_request_policy" "all_viewer_except_host_header" {
+  count = local.use_cloudfront ? 1 : 0
+  name  = "Managed-AllViewerExceptHostHeader"
+}
+
+data "aws_lb" "backend" {
+  name = "${var.project_name}-alb-${replace(var.environment, "-static", "")}"
+}
+
 resource "aws_cloudfront_distribution" "static_site" {
   count   = local.use_cloudfront ? 1 : 0
   enabled = true
@@ -69,6 +83,32 @@ resource "aws_cloudfront_distribution" "static_site" {
     s3_origin_config {
       origin_access_identity = ""
     }
+  }
+
+  origin {
+    domain_name = data.aws_lb.backend.dns_name
+    origin_id   = "alb"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  ordered_cache_behavior {
+    path_pattern     = "/api/*"
+    target_origin_id = "alb"
+
+    allowed_methods = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods  = ["GET", "HEAD"]
+
+    viewer_protocol_policy = "redirect-to-https"
+    compress               = true
+
+    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled[0].id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header[0].id
   }
 
   default_cache_behavior {
