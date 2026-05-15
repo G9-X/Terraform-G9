@@ -247,7 +247,7 @@ variable "enable_backup" {
 
 variable "geekbrain_llm_model_id" {
   type    = string
-  default = "us.meta.llama3-2-3b-instruct-v1:0" # Change based on us-east-1 availability
+  default = "deepseek.v3.2" # Change based on us-east-1 availability
 }
 
 variable "geekbrain_embedding_model_id" {

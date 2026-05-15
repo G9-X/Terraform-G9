@@ -29,6 +29,11 @@ resource "aws_iam_role_policy_attachment" "backup_restores" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForRestores"
 }
 
+resource "aws_iam_role_policy_attachment" "backup_kms" {
+  role       = aws_iam_role.backup.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSKeyManagementServicePowerUser"
+}
+
 # --- Backup Vault ---
 resource "aws_backup_vault" "main" {
   name = "${var.project_name}-vault"
