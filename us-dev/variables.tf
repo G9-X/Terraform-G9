@@ -229,6 +229,22 @@ variable "enable_geekbrain" {
   default = true
 }
 
+# ═══════════════════════════════════════
+# Week 5 Hardening Feature Flags
+# ═══════════════════════════════════════
+
+variable "enable_efs" {
+  description = "Enable EFS shared storage for backend containers"
+  type        = bool
+  default     = true
+}
+
+variable "enable_backup" {
+  description = "Enable AWS Backup vault and daily backup plan"
+  type        = bool
+  default     = true
+}
+
 variable "geekbrain_llm_model_id" {
   type    = string
   default = "us.meta.llama3-2-3b-instruct-v1:0" # Change based on us-east-1 availability

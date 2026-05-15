@@ -146,6 +146,45 @@ resource "aws_iam_role" "task_role" {
   assume_role_policy = data.aws_iam_policy_document.ecs_task_assume.json
 }
 
+data "aws_iam_policy_document" "task_ssm_exec" {
+  statement {
+    actions = [
+      "ssmmessages:CreateControlChannel",
+      "ssmmessages:CreateDataChannel",
+      "ssmmessages:OpenControlChannel",
+      "ssmmessages:OpenDataChannel"
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "task_ssm_exec" {
+  name   = "${var.project_name}-ecs-task-ssm-${var.environment}"
+  role   = aws_iam_role.task_role.id
+  policy = data.aws_iam_policy_document.task_ssm_exec.json
+}
+
+# --- EFS Access Policy for Task Role (Week 5) ---
+data "aws_iam_policy_document" "task_efs_access" {
+  count = var.efs_file_system_arn != "" ? 1 : 0
+
+  statement {
+    actions = [
+      "elasticfilesystem:ClientMount",
+      "elasticfilesystem:ClientWrite",
+      "elasticfilesystem:ClientRootAccess"
+    ]
+    resources = [var.efs_file_system_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "task_efs_access" {
+  count  = var.efs_file_system_arn != "" ? 1 : 0
+  name   = "${var.project_name}-ecs-task-efs-${var.environment}"
+  role   = aws_iam_role.task_role.id
+  policy = data.aws_iam_policy_document.task_efs_access[0].json
+}
+
 data "aws_iam_policy_document" "ecs_instance_assume" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -263,6 +302,24 @@ resource "aws_ecs_task_definition" "backend" {
   execution_role_arn       = aws_iam_role.execution_role.arn
   task_role_arn            = aws_iam_role.task_role.arn
 
+  # --- EFS Volume (Week 5 Hardening) ---
+  dynamic "volume" {
+    for_each = var.efs_file_system_id != "" ? [1] : []
+
+    content {
+      name = "efs-storage"
+
+      efs_volume_configuration {
+        file_system_id          = var.efs_file_system_id
+        transit_encryption      = "ENABLED"
+        authorization_config {
+          access_point_id = var.efs_access_point_id
+          iam             = "ENABLED"
+        }
+      }
+    }
+  }
+
   container_definitions = jsonencode([
     {
       name      = "backend"
@@ -275,6 +332,13 @@ resource "aws_ecs_task_definition" "backend" {
           protocol      = "tcp"
         }
       ]
+      mountPoints = var.efs_file_system_id != "" ? [
+        {
+          sourceVolume  = "efs-storage"
+          containerPath = "/mnt/efs"
+          readOnly      = false
+        }
+      ] : []
       environment = [
         {
           name  = "ASPNETCORE_URLS"
@@ -334,8 +398,9 @@ resource "aws_ecs_task_definition" "backend" {
 resource "aws_ecs_service" "backend" {
   name            = "${var.project_name}-backend-svc-${var.environment}"
   cluster         = aws_ecs_cluster.backend.id
-  task_definition = aws_ecs_task_definition.backend.arn
-  desired_count   = var.desired_count
+  task_definition        = aws_ecs_task_definition.backend.arn
+  desired_count          = var.desired_count
+  enable_execute_command = true
 
   capacity_provider_strategy {
     capacity_provider = aws_ecs_capacity_provider.ec2.name

@@ -1,13 +1,15 @@
 module "networking" {
   source = "../module/Networking"
 
-  project_name              = var.project_name
-  environment               = var.environment
-  vpc_cidr                  = var.vpc_cidr
-  public_subnet_cidrs       = var.public_subnet_cidrs
-  private_app_subnet_cidrs  = var.private_app_subnet_cidrs
-  private_data_subnet_cidrs = var.private_data_subnet_cidrs
-  availability_zones        = var.availability_zones
+  project_name                    = var.project_name
+  environment                     = var.environment
+  vpc_cidr                        = var.vpc_cidr
+  public_subnet_cidrs             = var.public_subnet_cidrs
+  private_app_subnet_cidrs        = var.private_app_subnet_cidrs
+  private_data_subnet_cidrs       = var.private_data_subnet_cidrs
+  availability_zones              = var.availability_zones
+  aws_region                      = var.aws_region
+  vpc_endpoints_security_group_id = module.security.vpc_endpoints_security_group_id
 }
 
 module "security" {
@@ -58,6 +60,31 @@ module "database_mysql" {
   db_password              = var.db_password
 }
 
+# ═══════════════════════════════════════
+# EFS — Shared Storage (Week 5 Hardening)
+# ═══════════════════════════════════════
+module "efs" {
+  count  = var.enable_efs ? 1 : 0
+  source = "../module/EFS"
+
+  project_name              = var.project_name
+  environment               = var.environment
+  vpc_id                    = module.networking.vpc_id
+  private_app_subnet_ids    = module.networking.private_app_subnet_ids
+  backend_security_group_id = module.security.backend_security_group_id
+}
+
+# ═══════════════════════════════════════
+# AWS Backup — Vault + Plan (Week 5 Hardening)
+# ═══════════════════════════════════════
+module "backup" {
+  count  = var.enable_backup ? 1 : 0
+  source = "../module/Backup"
+
+  project_name = var.project_name
+  environment  = var.environment
+}
+
 module "ecs_backend" {
   source = "../module/ECS_Backend"
 
@@ -89,6 +116,11 @@ module "ecs_backend" {
   stripe_secret_key         = var.stripe_secret_key
   stripe_publishable_key    = var.stripe_publishable_key
   stripe_webhook_secret     = var.stripe_webhook_secret
+
+  # EFS Integration (Week 5 Hardening)
+  efs_file_system_id  = var.enable_efs ? module.efs[0].file_system_id : ""
+  efs_access_point_id = var.enable_efs ? module.efs[0].access_point_id : ""
+  efs_file_system_arn = var.enable_efs ? module.efs[0].file_system_arn : ""
 }
 
 module "github_actions_oidc" {

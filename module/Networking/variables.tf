@@ -30,3 +30,11 @@ variable "availability_zones" {
   type = list(string)
 }
 
+variable "aws_region" {
+  type = string
+}
+
+variable "vpc_endpoints_security_group_id" {
+  type = string
+}
+

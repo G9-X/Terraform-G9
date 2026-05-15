@@ -127,3 +127,25 @@ variable "stripe_webhook_secret" {
   type      = string
   sensitive = true
 }
+
+# ═══════════════════════════════════════
+# EFS Integration (Week 5 Hardening)
+# ═══════════════════════════════════════
+
+variable "efs_file_system_id" {
+  description = "EFS File System ID to mount into backend containers"
+  type        = string
+  default     = ""
+}
+
+variable "efs_access_point_id" {
+  description = "EFS Access Point ID (POSIX user 1654)"
+  type        = string
+  default     = ""
+}
+
+variable "efs_file_system_arn" {
+  description = "EFS File System ARN for IAM policy"
+  type        = string
+  default     = ""
+}
