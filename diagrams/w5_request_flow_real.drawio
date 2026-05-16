@@ -1,0 +1,64 @@
+<mxfile host="app.diagrams.net" agent="Claude" version="24.7.6">
+  <diagram name="W5 Secure Egress Flow" id="w5-flow-v4">
+    <mxGraphModel dx="1800" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="W5 - Detailed Egress Inspection Path via AWS Network Firewall (MH2)" style="text;html=1;fontSize=18;fontStyle=1;align=left;fontColor=#232F3E;" vertex="1" parent="1">
+          <mxGeometry x="50" y="40" width="800" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Official AWS Icons -->
+        <mxCell id="ecs" value="ECS Tasks / EC2&#xa;[Private App Subnet]" style="sketch=0;outlineConnect=0;fillColor=#ED7100;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.ecs;fontSize=15;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="200" width="80" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="nfw" value="AWS Network Firewall&#xa;[Firewall Subnet]" style="sketch=0;outlineConnect=0;fillColor=#DD344C;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.network_firewall;fontSize=15;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="550" y="200" width="80" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="nat" value="NAT Gateway&#xa;[Public Subnet]" style="sketch=0;outlineConnect=0;fillColor=#8C4FFF;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.nat_gateway;fontSize=15;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="200" width="80" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="internet" value="Malicious Domain / Internet" style="sketch=0;outlineConnect=0;fillColor=#232F3E;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.client;fontSize=15;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1450" y="200" width="80" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Arrows with detailed labels (Font size 15) -->
+        <mxCell id="arr1" style="strokeWidth=3;strokeColor=#232F3E;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" source="ecs" target="nfw" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl1" value="1. App Route Table&#xa;Dest: 0.0.0.0/0&#xa;Target: Firewall VPCE" style="edgeLabel;html=1;fontSize=15;fontColor=#232F3E;align=center;fontStyle=1;" vertex="1" connectable="0" parent="arr1">
+          <mxGeometry x="-0.1" y="45" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="arr2" style="strokeWidth=4;strokeColor=#DD344C;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" source="nfw" target="nat" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl2" value="2. Inspect Traffic&#xa;Check Suricata Rules&#xa;[ALLOW / DROP]" style="edgeLabel;html=1;fontSize=15;fontColor=#DD344C;fontStyle=1;align=center;" vertex="1" connectable="0" parent="arr2">
+          <mxGeometry x="-0.1" y="45" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="arr3" style="strokeWidth=3;strokeColor=#232F3E;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" source="nat" target="internet" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lbl3" value="3. Forward Verified&#xa;Traffic to Internet" style="edgeLabel;html=1;fontSize=15;fontColor=#232F3E;align=center;fontStyle=1;" vertex="1" connectable="0" parent="arr3">
+          <mxGeometry x="-0.1" y="45" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- VPC Flow Logs Marker -->
+        <mxCell id="fl" value="✅ VPC Flow Logs Logging Traffic" style="sketch=0;outlineConnect=0;fillColor=#3F8624;strokeColor=none;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.vpc_flow_logs;fontSize=15;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="450" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Description box -->
+        <mxCell id="info" value="&lt;b&gt;MH2 Hardening Logic:&lt;/b&gt;&#xa;Traffic from App instances is forced through the Firewall Endpoint before reaching the NAT Gateway via Route Table manipulation. This allows deep packet inspection (DPI) and domain filtering using stateful rules." style="text;html=1;strokeColor=#DD344C;fillColor=#FFF;padding=15;fontSize=15;whiteSpace=wrap;rounded=1;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="500" y="450" width="600" height="100" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
